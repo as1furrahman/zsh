@@ -9,7 +9,7 @@
 #   ./install.sh --all       # Run everything (deps + config + system + shell)
 #   ./install.sh --deps      # Install distro packages, starship, zoxide & CLI symlinks
 #   ./install.sh --config    # Link user configurations to ~/.config/zsh
-#   ./install.sh --system    # Install /etc/zsh/zshenv (requires sudo)
+#   ./install.sh --system    # Install /etc/zsh/zshenv (requires root/sudo)
 #   ./install.sh --shell     # Change user default login shell to zsh
 #   ./install.sh --dry-run   # Preview actions without modifying anything
 #
@@ -47,6 +47,14 @@ log_ok()      { printf "%b[OK]%b %s\n" "$GREEN" "$NC" "$*"; }
 log_warn()    { printf "%b[WARN]%b %s\n" "$YELLOW" "$NC" "$*"; }
 log_err()     { printf "%b[ERROR]%b %s\n" "$RED" "$NC" "$*" >&2; }
 log_action()  { printf "%b==> %s%b\n" "$BOLD" "$*" "$NC"; }
+
+run_as_root() {
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
 
 detect_distro() {
   if [[ -f /etc/os-release ]]; then
@@ -88,7 +96,7 @@ OPTIONS:
   --all         Install dependencies, link configuration, set up system zshenv, and change shell
   --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, starship, zoxide)
   --config      Link/install configuration files to ~/.config/zsh
-  --system      Install system Zsh redirection to ~/.config/zsh (requires sudo)
+  --system      Install system Zsh redirection to ~/.config/zsh (requires root/sudo)
   --shell       Set zsh as the default login shell via chsh
   -n, --dry-run Preview changes without modifying files or system state
   -h, --help    Show this help message
@@ -170,27 +178,31 @@ install_deps() {
   case "$distro" in
     arch)
       if $DRY_RUN; then
-        log_info "Would run: sudo pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
+        log_info "Would run: pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
       else
-        log_info "Checking sudo access for pacman..."
-        sudo pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
+        log_info "Installing dependencies via pacman..."
+        run_as_root pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
       fi
       ;;
     fedora)
       if $DRY_RUN; then
-        log_info "Would run: sudo dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide"
+        log_info "Would run: dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide"
       else
-        log_info "Checking sudo access for dnf..."
-        sudo dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide
+        log_info "Installing dependencies via dnf..."
+        run_as_root dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide
       fi
       ;;
     debian)
       if $DRY_RUN; then
-        log_info "Would run: sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
+        log_info "Would run: apt update && apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
       else
-        log_info "Checking sudo access for apt..."
-        sudo apt update -y
-        sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+        log_info "Installing dependencies via apt..."
+        run_as_root apt update -y
+        if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+          DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+        else
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+        fi
       fi
       ;;
     *)
@@ -377,14 +389,14 @@ install_system() {
     fi
 
     if $DRY_RUN; then
-      log_info "Would copy $sys_src -> $target (sudo)"
+      log_info "Would copy $sys_src -> $target (root)"
     else
-      sudo mkdir -p "$(dirname "$target")"
+      run_as_root mkdir -p "$(dirname "$target")"
       if [[ -f "$target" ]]; then
-        sudo cp -a "$target" "${target}.bak.$(date +%Y%m%d_%H%M%S)"
+        run_as_root cp -a "$target" "${target}.bak.$(date +%Y%m%d_%H%M%S)"
         log_ok "Backed up existing $target"
       fi
-      sudo install -m 0644 -o root -g root "$sys_src" "$target"
+      run_as_root install -m 0644 -o root -g root "$sys_src" "$target"
       log_ok "Installed $target (root:root 0644)"
     fi
   done
@@ -398,8 +410,9 @@ set_default_shell() {
     return 0
   fi
 
+  local current_user="${USER:-$(id -un 2>/dev/null || whoami 2>/dev/null || echo "root")}"
   local current_shell
-  current_shell="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || grep "^$USER:" /etc/passwd 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
+  current_shell="$(getent passwd "$current_user" 2>/dev/null | cut -d: -f7 || grep "^$current_user:" /etc/passwd 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
   if [[ "$current_shell" == "$zsh_bin" ]]; then
     log_ok "Default shell is already $zsh_bin"
     return 0
@@ -407,12 +420,18 @@ set_default_shell() {
 
   log_action "Changing default shell to $zsh_bin..."
   if $DRY_RUN; then
-    log_info "Would run: chsh -s $zsh_bin $USER"
+    log_info "Would run: chsh -s $zsh_bin $current_user"
   else
-    if ! chsh -s "$zsh_bin" "$USER" 2>/dev/null; then
-      log_warn "Automatic chsh failed (password may be required). Run: chsh -s $zsh_bin"
-    else
-      log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
+    if command -v chsh >/dev/null 2>&1; then
+      if ! chsh -s "$zsh_bin" "$current_user" 2>/dev/null; then
+        log_warn "Automatic chsh failed (password may be required). Run: chsh -s $zsh_bin"
+      else
+        log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
+      fi
+    elif [[ -f /etc/passwd ]] && [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+      # Fallback in minimal containers without chsh
+      sed -i -E "s|^(${current_user}:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*):.*$|\1:${zsh_bin}|" /etc/passwd 2>/dev/null || true
+      log_ok "Updated default shell in /etc/passwd to $zsh_bin"
     fi
   fi
 }
