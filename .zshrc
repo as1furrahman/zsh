@@ -1,5 +1,5 @@
 # Powerful but tastefully minimal zsh configuration
-# Tailored for Ubuntu 26.04.1 LTS & XDG Base Directory specification
+# Follows the XDG Base Directory specification
 
 # =========================================================
 # ZDOTDIR Fallback
@@ -45,11 +45,6 @@ setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
 # =========================================================
 # Smart Directory Navigation & Tools
 # =========================================================
-
-if [[ -f ~/.config/lf/icons ]]; then
-  LF_ICONS=$(cat ~/.config/lf/icons | tr '\n' ':')
-  export LF_ICONS
-fi
 
 # Initialize zoxide (smart cd replacement)
 if command -v zoxide >/dev/null 2>&1; then

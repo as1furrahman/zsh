@@ -65,18 +65,7 @@ alias vim='nvim'
 alias glog='PAGER="less -F -X" git log'
 alias gadog='PAGER="less -F -X" git log --all --decorate --oneline --graph'
 
-# Dotfiles repo management (adaptive)
-if [[ -d "$HOME/Projects/dotfile/.git" ]]; then
-  alias dotfiles='git -C "$HOME/Projects/dotfile"'
-elif [[ -d "$ZDOTDIR/.git" ]]; then
+# Dotfiles repo management (only when the config dir is itself a checkout)
+if [[ -d "$ZDOTDIR/.git" ]]; then
   alias dotfiles='git -C "$ZDOTDIR"'
-fi
-
-# =========================================================
-# Video / Streaming
-# =========================================================
-
-# Guarded: only register stream alias if mpv is installed
-if command -v mpv >/dev/null 2>&1; then
-  alias stream='mpv av://v4l2:/dev/video4 --fullscreen --demuxer-lavf-o=input_format=mjpeg,framerate=30 --profile=low-latency --untimed'
 fi
