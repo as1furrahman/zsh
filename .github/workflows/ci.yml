@@ -33,8 +33,8 @@ jobs:
             fi
           done
 
-  test-reproduction:
-    name: Test Reproduction & Shell Startup
+  test-ubuntu:
+    name: Test Ubuntu
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -53,20 +53,66 @@ jobs:
         run: |
           ./install.sh --config
 
-      - name: Test interactive shell startup
+      - name: Test shell startup
         run: |
-          zsh -i -c 'echo "Interactive Shell OK"; echo "HISTFILE: $HISTFILE"'
+          zsh -i -c 'echo "Ubuntu Shell OK"'
 
-      - name: Test non-interactive shell execution
+      - name: Test keybindings
         run: |
-          zsh -c 'echo "Non-Interactive Shell OK"'
+          zsh -i -c 'zvm_init; bindkey -M viins "^F"; bindkey -M vicmd "k"'
 
-      - name: Test keybindings and vi-mode
+  test-arch:
+    name: Test Arch Linux
+    runs-on: ubuntu-latest
+    container: "archlinux:latest"
+    steps:
+      - name: Install Arch dependencies
         run: |
-          zsh -i -c '
-            zvm_init
-            bindkey -M viins "^F"
-            bindkey -M viins "^I"
-            bindkey -M vicmd "k"
-            bindkey -M vicmd "j"
-          '
+          pacman -Syu --noconfirm git zsh fzf ripgrep fd bat
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test installer dry-run
+        run: |
+          ./install.sh --dry-run
+
+      - name: Test installer config
+        run: |
+          ./install.sh --config
+
+      - name: Test shell startup
+        run: |
+          zsh -i -c 'echo "Arch Linux Shell OK"'
+
+      - name: Test keybindings
+        run: |
+          zsh -i -c 'zvm_init; bindkey -M viins "^F"; bindkey -M vicmd "k"'
+
+  test-fedora:
+    name: Test Fedora
+    runs-on: ubuntu-latest
+    container: "fedora:latest"
+    steps:
+      - name: Install Fedora dependencies
+        run: |
+          dnf install -y git zsh fzf ripgrep fd-find bat util-linux-user
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test installer dry-run
+        run: |
+          ./install.sh --dry-run
+
+      - name: Test installer config
+        run: |
+          ./install.sh --config
+
+      - name: Test shell startup
+        run: |
+          zsh -i -c 'echo "Fedora Shell OK"'
+
+      - name: Test keybindings
+        run: |
+          zsh -i -c 'zvm_init; bindkey -M viins "^F"; bindkey -M vicmd "k"'

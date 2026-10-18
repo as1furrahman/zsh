@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# Zsh Configuration Installer for Ubuntu 26.04.1 LTS
+# Zsh Configuration Installer for Arch, Fedora & Ubuntu / Debian
 # Sets up dependencies, XDG directory structure, system /etc/zsh/zshenv,
 # and links/compiles the Zsh configuration.
 #
 # Usage:
 #   ./install.sh             # Full automated reproduction (interactive prompts for sudo/chsh)
 #   ./install.sh --all       # Run everything (deps + config + system + shell)
-#   ./install.sh --deps      # Install apt dependencies, starship, zoxide & CLI symlinks
+#   ./install.sh --deps      # Install distro packages, starship, zoxide & CLI symlinks
 #   ./install.sh --config    # Link user configurations to ~/.config/zsh
 #   ./install.sh --system    # Install /etc/zsh/zshenv (requires sudo)
 #   ./install.sh --shell     # Change user default login shell to zsh
@@ -48,18 +48,47 @@ log_warn()    { printf "%b[WARN]%b %s\n" "$YELLOW" "$NC" "$*"; }
 log_err()     { printf "%b[ERROR]%b %s\n" "$RED" "$NC" "$*" >&2; }
 log_action()  { printf "%b==> %s%b\n" "$BOLD" "$*" "$NC"; }
 
+detect_distro() {
+  if [[ -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    case "${ID:-}:${ID_LIKE:-}" in
+      *arch*|*manjaro*|*endeavouros*)
+        echo "arch"
+        ;;
+      *fedora*|*rhel*|*centos*)
+        echo "fedora"
+        ;;
+      *ubuntu*|*debian*|*pop*|*mint*)
+        echo "debian"
+        ;;
+      *)
+        echo "unknown"
+        ;;
+    esac
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "arch"
+  elif command -v dnf >/dev/null 2>&1; then
+    echo "fedora"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "debian"
+  else
+    echo "unknown"
+  fi
+}
+
 usage() {
   cat <<EOF
-Zsh Configuration Installer (Ubuntu 26.04.1 LTS)
+Zsh Configuration Installer (Arch, Fedora & Ubuntu / Debian)
 
 USAGE:
   ./install.sh [OPTIONS]
 
 OPTIONS:
   --all         Install dependencies, link configuration, set up system zshenv, and change shell
-  --deps        Install Ubuntu packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, starship, zoxide)
+  --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, starship, zoxide)
   --config      Link/install configuration files to ~/.config/zsh
-  --system      Install /etc/zsh/zshenv to redirect ZDOTDIR to ~/.config/zsh (requires sudo)
+  --system      Install system Zsh redirection to ~/.config/zsh (requires sudo)
   --shell       Set zsh as the default login shell via chsh
   -n, --dry-run Preview changes without modifying files or system state
   -h, --help    Show this help message
@@ -134,51 +163,74 @@ backup_if_exists() {
 }
 
 install_deps() {
-  log_action "Installing Ubuntu packages & dependencies..."
+  local distro
+  distro="$(detect_distro)"
+  log_action "Installing packages & dependencies for $distro Linux..."
 
-  if $DRY_RUN; then
-    log_info "Would run: sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
-  else
-    log_info "Checking sudo access..."
-    sudo apt update -y
-    sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
-  fi
+  case "$distro" in
+    arch)
+      if $DRY_RUN; then
+        log_info "Would run: sudo pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
+      else
+        log_info "Checking sudo access for pacman..."
+        sudo pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
+      fi
+      ;;
+    fedora)
+      if $DRY_RUN; then
+        log_info "Would run: sudo dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide"
+      else
+        log_info "Checking sudo access for dnf..."
+        sudo dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide
+      fi
+      ;;
+    debian)
+      if $DRY_RUN; then
+        log_info "Would run: sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
+      else
+        log_info "Checking sudo access for apt..."
+        sudo apt update -y
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+      fi
+      ;;
+    *)
+      log_warn "Unknown Linux distribution. Skipping automatic package manager installation."
+      log_info "Please ensure the following tools are installed: zsh neovim eza bat fd fzf ripgrep starship zoxide"
+      ;;
+  esac
 
   # Ensure ~/.local/bin exists in PATH
   mkdir -p "$HOME/.local/bin"
 
-  # Ubuntu packages bat as batcat and fd as fdfind; create compat symlinks
+  # Distros packaging bat as batcat (Debian/Ubuntu)
   local batcat_bin
   batcat_bin="$(command -v batcat || true)"
-  if [[ -n "$batcat_bin" ]]; then
-    if [[ ! -e "$HOME/.local/bin/bat" && ! -L "$HOME/.local/bin/bat" ]]; then
+  if [[ -n "$batcat_bin" && ! -e "$HOME/.local/bin/bat" && ! -L "$HOME/.local/bin/bat" ]]; then
+    if ! command -v bat >/dev/null 2>&1; then
       if $DRY_RUN; then
         log_info "Would symlink $HOME/.local/bin/bat -> $batcat_bin"
       else
         ln -sf "$batcat_bin" "$HOME/.local/bin/bat"
         log_ok "Symlinked ~/.local/bin/bat -> $batcat_bin"
       fi
-    else
-      log_ok "$HOME/.local/bin/bat already exists"
     fi
   fi
 
+  # Distros packaging fd as fdfind (Debian/Ubuntu/Fedora)
   local fdfind_bin
   fdfind_bin="$(command -v fdfind || true)"
-  if [[ -n "$fdfind_bin" ]]; then
-    if [[ ! -e "$HOME/.local/bin/fd" && ! -L "$HOME/.local/bin/fd" ]]; then
+  if [[ -n "$fdfind_bin" && ! -e "$HOME/.local/bin/fd" && ! -L "$HOME/.local/bin/fd" ]]; then
+    if ! command -v fd >/dev/null 2>&1; then
       if $DRY_RUN; then
         log_info "Would symlink $HOME/.local/bin/fd -> $fdfind_bin"
       else
         ln -sf "$fdfind_bin" "$HOME/.local/bin/fd"
         log_ok "Symlinked ~/.local/bin/fd -> $fdfind_bin"
       fi
-    else
-      log_ok "$HOME/.local/bin/fd already exists"
     fi
   fi
 
-  # Starship prompt installation
+  # Starship prompt installation (fallback if not installed via distro package manager)
   if ! command -v starship >/dev/null 2>&1; then
     log_action "Installing Starship prompt..."
     if $DRY_RUN; then
@@ -191,7 +243,7 @@ install_deps() {
     log_ok "Starship is already installed"
   fi
 
-  # Zoxide installation
+  # Zoxide installation (fallback if not installed via distro package manager)
   if ! command -v zoxide >/dev/null 2>&1; then
     log_action "Installing zoxide..."
     if $DRY_RUN; then
@@ -229,6 +281,7 @@ install_config() {
       "prompt.zsh"
       "starship.toml"
       ".gitignore"
+      "LICENSE"
     )
 
     for file in "${files[@]}"; do
@@ -298,30 +351,43 @@ install_config() {
 }
 
 install_system() {
-  log_action "Installing system /etc/zsh/zshenv..."
+  log_action "Installing system Zsh redirection..."
   local sys_src="$SCRIPT_DIR/system/etc/zsh/zshenv"
-  local sys_dest="/etc/zsh/zshenv"
+  local dest_zsh="/etc/zsh/zshenv"
+  local dest_etc="/etc/zshenv"
 
   if [[ ! -f "$sys_src" ]]; then
     log_err "Missing $sys_src"
     return 1
   fi
 
-  if cmp -s "$sys_src" "$sys_dest" 2>/dev/null; then
-    log_ok "/etc/zsh/zshenv is already up to date"
-    return 0
+  # Support both /etc/zsh/zshenv (Debian/Ubuntu/Arch) and /etc/zshenv (Fedora/RHEL)
+  local targets=()
+  targets+=("$dest_zsh")
+  local distro
+  distro="$(detect_distro)"
+  if [[ "$distro" == "fedora" || -f "$dest_etc" ]]; then
+    targets+=("$dest_etc")
   fi
 
-  if $DRY_RUN; then
-    log_info "Would copy $sys_src -> $sys_dest (sudo)"
-  else
-    if [[ -f "$sys_dest" ]]; then
-      sudo cp -a "$sys_dest" "${sys_dest}.bak.$(date +%Y%m%d_%H%M%S)"
-      log_ok "Backed up existing $sys_dest"
+  for target in "${targets[@]}"; do
+    if cmp -s "$sys_src" "$target" 2>/dev/null; then
+      log_ok "$target is already up to date"
+      continue
     fi
-    sudo install -m 0644 -o root -g root "$sys_src" "$sys_dest"
-    log_ok "Installed /etc/zsh/zshenv (root:root 0644)"
-  fi
+
+    if $DRY_RUN; then
+      log_info "Would copy $sys_src -> $target (sudo)"
+    else
+      sudo mkdir -p "$(dirname "$target")"
+      if [[ -f "$target" ]]; then
+        sudo cp -a "$target" "${target}.bak.$(date +%Y%m%d_%H%M%S)"
+        log_ok "Backed up existing $target"
+      fi
+      sudo install -m 0644 -o root -g root "$sys_src" "$target"
+      log_ok "Installed $target (root:root 0644)"
+    fi
+  done
 }
 
 set_default_shell() {
