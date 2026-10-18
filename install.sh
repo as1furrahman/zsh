@@ -16,7 +16,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
+TARGET_DIR="${ZSH_INSTALL_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zsh}"
 BACKUP_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/zsh-backups/$(date +%Y%m%d_%H%M%S)"
 
 DRY_RUN=false
@@ -42,20 +42,20 @@ else
   NC=''
 fi
 
-log_info()    { printf "${BLUE}[INFO]${NC} %s\n" "$*"; }
-log_ok()      { printf "${GREEN}[OK]${NC} %s\n" "$*"; }
-log_warn()    { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
-log_err()     { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; }
-log_action()  { printf "${BOLD}==> %s${NC}\n" "$*"; }
+log_info()    { printf "%b[INFO]%b %s\n" "$BLUE" "$NC" "$*"; }
+log_ok()      { printf "%b[OK]%b %s\n" "$GREEN" "$NC" "$*"; }
+log_warn()    { printf "%b[WARN]%b %s\n" "$YELLOW" "$NC" "$*"; }
+log_err()     { printf "%b[ERROR]%b %s\n" "$RED" "$NC" "$*" >&2; }
+log_action()  { printf "%b==> %s%b\n" "$BOLD" "$*" "$NC"; }
 
 usage() {
   cat <<EOF
-${BOLD}Zsh Configuration Installer (Ubuntu 26.04.1 LTS)${NC}
+Zsh Configuration Installer (Ubuntu 26.04.1 LTS)
 
-${BOLD}USAGE:${NC}
+USAGE:
   ./install.sh [OPTIONS]
 
-${BOLD}OPTIONS:${NC}
+OPTIONS:
   --all         Install dependencies, link configuration, set up system zshenv, and change shell
   --deps        Install Ubuntu packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, starship, zoxide)
   --config      Link/install configuration files to ~/.config/zsh
@@ -129,11 +129,11 @@ install_deps() {
   log_action "Installing Ubuntu packages & dependencies..."
 
   if $DRY_RUN; then
-    log_info "Would run: sudo apt update && sudo apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
+    log_info "Would run: sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
   else
     log_info "Checking sudo access..."
     sudo apt update -y
-    sudo apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+    sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
   fi
 
   # Ensure ~/.local/bin exists in PATH
@@ -142,23 +142,31 @@ install_deps() {
   # Ubuntu packages bat as batcat and fd as fdfind; create compat symlinks
   local batcat_bin
   batcat_bin="$(command -v batcat || true)"
-  if [[ -n "$batcat_bin" && ! -e "$HOME/.local/bin/bat" ]]; then
-    if $DRY_RUN; then
-      log_info "Would symlink $HOME/.local/bin/bat -> $batcat_bin"
+  if [[ -n "$batcat_bin" ]]; then
+    if [[ ! -e "$HOME/.local/bin/bat" && ! -L "$HOME/.local/bin/bat" ]]; then
+      if $DRY_RUN; then
+        log_info "Would symlink $HOME/.local/bin/bat -> $batcat_bin"
+      else
+        ln -sf "$batcat_bin" "$HOME/.local/bin/bat"
+        log_ok "Symlinked ~/.local/bin/bat -> $batcat_bin"
+      fi
     else
-      ln -sf "$batcat_bin" "$HOME/.local/bin/bat"
-      log_ok "Symlinked ~/.local/bin/bat -> $batcat_bin"
+      log_ok "$HOME/.local/bin/bat already exists"
     fi
   fi
 
   local fdfind_bin
   fdfind_bin="$(command -v fdfind || true)"
-  if [[ -n "$fdfind_bin" && ! -e "$HOME/.local/bin/fd" ]]; then
-    if $DRY_RUN; then
-      log_info "Would symlink $HOME/.local/bin/fd -> $fdfind_bin"
+  if [[ -n "$fdfind_bin" ]]; then
+    if [[ ! -e "$HOME/.local/bin/fd" && ! -L "$HOME/.local/bin/fd" ]]; then
+      if $DRY_RUN; then
+        log_info "Would symlink $HOME/.local/bin/fd -> $fdfind_bin"
+      else
+        ln -sf "$fdfind_bin" "$HOME/.local/bin/fd"
+        log_ok "Symlinked ~/.local/bin/fd -> $fdfind_bin"
+      fi
     else
-      ln -sf "$fdfind_bin" "$HOME/.local/bin/fd"
-      log_ok "Symlinked ~/.local/bin/fd -> $fdfind_bin"
+      log_ok "$HOME/.local/bin/fd already exists"
     fi
   fi
 
@@ -190,7 +198,7 @@ install_deps() {
 }
 
 install_config() {
-  log_action "Configuring user files (~/.config/zsh)..."
+  log_action "Configuring user files ($TARGET_DIR)..."
 
   # Ensure state and cache directories exist
   if ! $DRY_RUN; then
@@ -199,7 +207,7 @@ install_config() {
     mkdir -p "$TARGET_DIR"
   fi
 
-  # If repo is already located at ~/.config/zsh, we don't need to symlink internally
+  # If repo is already located at TARGET_DIR, we don't need to symlink internally
   if [[ "$SCRIPT_DIR" == "$TARGET_DIR" ]]; then
     log_ok "Repository is already located at $TARGET_DIR"
   else
@@ -237,10 +245,42 @@ install_config() {
     done
   fi
 
+  # Pre-clone plugins for instant first-run experience if git is available
+  local plugin_dir="$TARGET_DIR/plugins"
+  if command -v git >/dev/null 2>&1 && ! $DRY_RUN; then
+    mkdir -p "$plugin_dir"
+    local -a p_names=("fzf-tab" "fast-syntax-highlighting" "zsh-autosuggestions" "zsh-history-substring-search" "zsh-vi-mode")
+    local -a p_repos=(
+      "https://github.com/Aloxaf/fzf-tab"
+      "https://github.com/zdharma-continuum/fast-syntax-highlighting"
+      "https://github.com/zsh-users/zsh-autosuggestions"
+      "https://github.com/zsh-users/zsh-history-substring-search"
+      "https://github.com/jeffreytse/zsh-vi-mode"
+    )
+
+    local i
+    for i in "${!p_names[@]}"; do
+      local p_name="${p_names[$i]}"
+      local p_repo="${p_repos[$i]}"
+      local p_dest="$plugin_dir/$p_name"
+      if [[ ! -d "$p_dest" ]]; then
+        log_info "Pre-cloning plugin: $p_name..."
+        git clone --depth=1 "$p_repo" "$p_dest" 2>/dev/null || log_warn "Could not pre-clone $p_name (will auto-install on first shell boot)"
+      else
+        log_ok "Plugin $p_name is already cloned"
+      fi
+    done
+  fi
+
   # Pre-compile bytecode for instant startup
   if command -v zsh >/dev/null 2>&1 && ! $DRY_RUN; then
     log_info "Compiling bytecode (.zwc)..."
     for f in "$TARGET_DIR"/.zshrc "$TARGET_DIR"/.zshenv "$TARGET_DIR"/*.zsh; do
+      if [[ -f "$f" ]]; then
+        zsh -c "zcompile '$f'" 2>/dev/null || true
+      fi
+    done
+    for f in "$plugin_dir"/*/*.plugin.zsh "$plugin_dir"/*/*.zsh; do
       if [[ -f "$f" ]]; then
         zsh -c "zcompile '$f'" 2>/dev/null || true
       fi
@@ -285,7 +325,7 @@ set_default_shell() {
   fi
 
   local current_shell
-  current_shell="$(grep "^$USER:" /etc/passwd | cut -d: -f7)"
+  current_shell="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || grep "^$USER:" /etc/passwd 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
   if [[ "$current_shell" == "$zsh_bin" ]]; then
     log_ok "Default shell is already $zsh_bin"
     return 0
@@ -295,24 +335,27 @@ set_default_shell() {
   if $DRY_RUN; then
     log_info "Would run: chsh -s $zsh_bin $USER"
   else
-    chsh -s "$zsh_bin" "$USER"
-    log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
+    if ! chsh -s "$zsh_bin" "$USER" 2>/dev/null; then
+      log_warn "Automatic chsh failed (password may be required). Run: chsh -s $zsh_bin"
+    else
+      log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
+    fi
   fi
 }
 
 main() {
-  printf "\n${BOLD}================================================${NC}\n"
-  printf "${BOLD}   Zsh Reproducible Environment Setup          ${NC}\n"
-  printf "${BOLD}================================================${NC}\n\n"
+  printf '\n%b================================================%b\n' "$BOLD" "$NC"
+  printf '%b   Zsh Reproducible Environment Setup          %b\n' "$BOLD" "$NC"
+  printf '%b================================================%b\n\n' "$BOLD" "$NC"
 
   $DO_DEPS && install_deps
   $DO_CONFIG && install_config
   $DO_SYSTEM && install_system
   $DO_SHELL && set_default_shell
 
-  printf "\n${GREEN}${BOLD}✔ Setup completed successfully!${NC}\n"
-  printf "To start using your new configuration, simply launch:\n"
-  printf "    ${BOLD}exec zsh${NC}\n\n"
+  printf '\n%b%b✔ Setup completed successfully!%b\n' "$GREEN" "$BOLD" "$NC"
+  printf 'To start using your new configuration, simply launch:\n'
+  printf '    %bexec zsh%b\n\n' "$BOLD" "$NC"
 }
 
 main

@@ -6,15 +6,17 @@ ZPLUGINDIR="${ZDOTDIR:-$HOME/.config/zsh}/plugins"
 
 _zplugin_load() {
   local plugin_path="${ZPLUGINDIR}/${2}"
-  if [[ ! -d "$plugin_path" ]]; then
-    mkdir -p "$ZPLUGINDIR"
-    echo "Installing ${2}..."
-    git clone --depth=1 "https://github.com/${1}/${2}" "$plugin_path" \
-      || { echo "ERROR: failed to install ${2}" >&2; return 1; }
-  fi
-
   local plugin_file="${plugin_path}/${2}.plugin.zsh"
   [[ -f "$plugin_file" ]] || plugin_file="${plugin_path}/${2}.zsh"
+
+  if [[ ! -d "$plugin_path" || ! -f "$plugin_file" ]]; then
+    mkdir -p "$ZPLUGINDIR"
+    rm -rf "$plugin_path"
+    echo "Installing ${2}..."
+    git clone --depth=1 "https://github.com/${1}/${2}" "$plugin_path" \
+      || { echo "ERROR: failed to install ${2}" >&2; rm -rf "$plugin_path"; return 1; }
+    [[ -f "$plugin_file" ]] || plugin_file="${plugin_path}/${2}.zsh"
+  fi
 
   if [[ -f "$plugin_file" ]]; then
     # Bytecode compile if missing or modified
