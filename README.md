@@ -1,8 +1,8 @@
 # zsh
 
 ```sh
-git clone git@github.com:as1furrahman/zsh.git ~/Projects/zsh
-cd ~/Projects/zsh && ./install.sh
+git clone https://github.com/as1furrahman/zsh.git ~/.config/zsh
+cd ~/.config/zsh && ./install.sh
 ```
 
 ### Shortcuts
