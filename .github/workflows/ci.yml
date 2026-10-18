@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint & Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck and Zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck zsh
+
+      - name: Run ShellCheck on install.sh
+        run: |
+          shellcheck install.sh
+
+      - name: Validate Zsh syntax (zsh -n)
+        run: |
+          for f in *.zsh .zshenv .zshrc system/etc/zsh/*; do
+            if [ -f "$f" ]; then
+              zsh -n "$f"
+              echo "Syntax OK: $f"
+            fi
+          done
+
+  test-reproduction:
+    name: Test Reproduction & Shell Startup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh git curl fzf bat fd-find ripgrep
+
+      - name: Test installer dry-run
+        run: |
+          ./install.sh --dry-run
+
+      - name: Test installer config
+        run: |
+          ./install.sh --config
+
+      - name: Test interactive shell startup
+        run: |
+          zsh -i -c 'echo "Interactive Shell OK"; echo "HISTFILE: $HISTFILE"'
+
+      - name: Test non-interactive shell execution
+        run: |
+          zsh -c 'echo "Non-Interactive Shell OK"'
+
+      - name: Test keybindings and vi-mode
+        run: |
+          zsh -i -c '
+            zvm_init
+            bindkey -M viins "^F"
+            bindkey -M viins "^I"
+            bindkey -M vicmd "k"
+            bindkey -M vicmd "j"
+          '
