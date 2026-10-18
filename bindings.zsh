@@ -12,8 +12,9 @@ ZVM_VI_HIGHLIGHT_BACKGROUND=none
 ZVM_VI_HIGHLIGHT_FOREGROUND=none
 ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
 
-# Reduce escape sequence delay from 400ms to 10ms for instant Vi mode switching
-export KEYTIMEOUT=1
+# Reduce escape sequence delay from 400ms to 50ms: fast Vi mode switching that
+# still survives multi-byte key sequences over SSH
+export KEYTIMEOUT=5
 
 # zsh-vi-mode resets all bindings on init, so custom bindings
 # must be registered via this hook to survive.
@@ -37,12 +38,17 @@ zvm_after_init() {
   bindkey '^\' autosuggest-toggle
 
   # Up/Down in insert mode -> history search by substring
+  # (^[[A/B are normal cursor mode, ^[OA/B are application mode)
   bindkey '^[[A' history-substring-search-up
   bindkey '^[[B' history-substring-search-down
+  bindkey '^[OA' history-substring-search-up
+  bindkey '^[OB' history-substring-search-down
 
   # Normal mode (vicmd): Up/Down and k/j for substring search
   bindkey -M vicmd 'k' history-substring-search-up
   bindkey -M vicmd 'j' history-substring-search-down
   bindkey -M vicmd '^[[A' history-substring-search-up
   bindkey -M vicmd '^[[B' history-substring-search-down
+  bindkey -M vicmd '^[OA' history-substring-search-up
+  bindkey -M vicmd '^[OB' history-substring-search-down
 }

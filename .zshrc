@@ -27,7 +27,7 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_FIND_NO_DUPS
 setopt EXTENDED_HISTORY         # Record timestamp (epoch) and execution duration
-setopt INC_APPEND_HISTORY_TIME  # Append immediately upon command exit with execution time
+setopt SHARE_HISTORY            # Share history live between sessions (implies incremental append)
 setopt HIST_REDUCE_BLANKS       # Remove superfluous blanks from history commands
 
 # =========================================================
@@ -37,7 +37,6 @@ setopt HIST_REDUCE_BLANKS       # Remove superfluous blanks from history command
 setopt AUTOCD
 setopt NOBEEP
 setopt NUMERIC_GLOB_SORT       # Sort file10 after file9, not after file1
-setopt EXTENDED_GLOB           # Enable advanced zsh glob qualifiers and patterns
 setopt AUTO_PUSHD              # Make cd push old directory to stack
 setopt PUSHD_IGNORE_DUPS       # Don't push duplicate directories to stack
 setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
@@ -64,13 +63,15 @@ autoload -Uz compinit
 
 # Fast compinit: run compaudit check once every 20 hours; otherwise reuse dump cache (-C)
 _zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
-if [[ -n "$_zcompdump"(#qN.mh-20) ]]; then
+# (N.mh-20): plain file modified within the last 20 hours; needs no EXTENDED_GLOB
+_zcompdump_fresh=("$_zcompdump"(N.mh-20))
+if (( $#_zcompdump_fresh )); then
   compinit -C -d "$_zcompdump"
 else
   compinit -d "$_zcompdump"
   { zcompile "$_zcompdump" } >/dev/null 2>&1 &!
 fi
-unset _zcompdump
+unset _zcompdump _zcompdump_fresh
 
 # Enable completion caching
 zstyle ':completion:*' use-cache on
