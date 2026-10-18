@@ -1,4 +1,4 @@
-# zsh
+# zsh [![CI](https://github.com/as1furrahman/zsh/actions/workflows/ci.yml/badge.svg)](https://github.com/as1furrahman/zsh/actions/workflows/ci.yml)
 
 ```sh
 git clone https://github.com/as1furrahman/zsh.git ~/.config/zsh
