@@ -88,6 +88,7 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Fuzzy Finder (fzf key-bindings and completion)
 # =========================================================
 
+_fzf_loaded=0
 for _fzf_script in \
   /opt/homebrew/opt/fzf/shell \
   /usr/local/opt/fzf/shell \
@@ -97,10 +98,17 @@ for _fzf_script in \
   if [[ -f "$_fzf_script/key-bindings.zsh" ]]; then
     source "$_fzf_script/key-bindings.zsh"
     [[ -f "$_fzf_script/completion.zsh" ]] && source "$_fzf_script/completion.zsh"
+    _fzf_loaded=1
     break
   fi
 done
 unset _fzf_script
+
+# Fallback for standalone fzf binary installations
+if (( ! _fzf_loaded )) && command -v fzf >/dev/null 2>&1; then
+  eval "$(fzf --zsh 2>/dev/null)"
+fi
+unset _fzf_loaded
 
 # =========================================================
 # Modular Config Modules

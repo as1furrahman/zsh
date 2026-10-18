@@ -40,7 +40,7 @@ skip_global_compinit=1
 
 # ---------- PATH ----------
 # Personal binaries/scripts
-[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Optional tool binary paths (guarded)
 [[ -d "$HOME/.strix/bin" ]] && export PATH="$HOME/.strix/bin:$PATH"
