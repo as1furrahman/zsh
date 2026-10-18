@@ -116,78 +116,12 @@ source "$ZDOTDIR/plugins.zsh"
 source "$ZDOTDIR/prompt.zsh"
 
 # =========================================================
-# Node (nvm) - Instant Fast-Path & Lazy Loader
+# Runtime Versions (mise)
 # =========================================================
 
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-
-if [[ -d "$NVM_DIR/versions/node" ]]; then
-  _has_default=0
-  _v=''
-  if [[ -r "$NVM_DIR/alias/default" ]]; then
-    _has_default=1
-    _v="$(< "$NVM_DIR/alias/default")"
-  fi
-
-  _seen=" :$_v:"
-  while [[ -n "$_v" && -r "$NVM_DIR/alias/$_v" ]]; do
-    _next="$(< "$NVM_DIR/alias/$_v")"
-    [[ $_seen == *":$_next:"* ]] && break
-    _v="$_next"
-    _seen="$_seen$_v:"
-  done
-  unset _seen _next
-  _v="${_v#v}"
-
-  _bin=''
-  if [[ "$_v" == "system" ]]; then
-    : # Preserve system node selection
-  else
-    # When fast path cannot resolve the configured alias, load nvm to resolve it
-    if [[ "$_v" == */* || ( -n "$_v" && ! "$_v" =~ ^[0-9] ) ]]; then
-      if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-        . "$NVM_DIR/nvm.sh" --no-use 2>/dev/null
-        _resolved="$(nvm_resolve_alias "${_v:-default}" 2>/dev/null)"
-        _resolved="${_resolved#v}"
-        if [[ "$_resolved" == "system" ]]; then
-          _v="system"
-        elif [[ "$_resolved" =~ ^[0-9] ]]; then
-          _v="$_resolved"
-        else
-          _v=''
-        fi
-        unset _resolved
-      fi
-    fi
-
-    if [[ "$_v" == "system" ]]; then
-      : # Preserve system node selection
-    elif [[ -n "$_v" ]]; then
-      for _d in "$NVM_DIR"/versions/node/v${_v}(|.*)/bin(Nn); do _bin=$_d; done
-    elif (( ! _has_default )); then
-      for _d in "$NVM_DIR"/versions/node/*/bin(Nn); do _bin=$_d; done
-    fi
-
-    if [[ -n $_bin ]]; then
-      case ":$PATH:" in
-        *":$_bin:"*) ;;
-        *) PATH="$_bin:$PATH" ;;
-      esac
-    fi
-  fi
-  unset _has_default _v _bin _d
-fi
-export PATH
-
-# Load real nvm on first use
-if [[ -s "$NVM_DIR/nvm.sh" ]] && (( ! $+functions[nvm] )); then
-  nvm() {
-    unfunction nvm
-    . "$NVM_DIR/nvm.sh"
-    [[ -s "$NVM_DIR/bash_completion" ]] && . "$NVM_DIR/bash_completion"
-    rehash
-    nvm "$@"
-  }
+# Per-project node/python/etc. versions; replaces the old nvm fast-path.
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
 fi
 
 # =========================================================
