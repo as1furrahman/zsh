@@ -275,6 +275,7 @@ install_config() {
       "bindings.zsh"
       "fzf.zsh"
       "plugins.zsh"
+      "plugins.lock"
       "prompt.zsh"
       "starship.toml"
       ".gitignore"
@@ -303,31 +304,30 @@ install_config() {
     done
   fi
 
-  # Pre-clone plugins for instant first-run experience if git is available
+  # Install plugins at the exact commits pinned in plugins.lock
   local plugin_dir="$TARGET_DIR/plugins"
-  if command -v git >/dev/null 2>&1 && ! $DRY_RUN; then
+  local lock="$SCRIPT_DIR/plugins.lock"
+  if command -v git >/dev/null 2>&1 && [[ -f "$lock" ]] && ! $DRY_RUN; then
     mkdir -p "$plugin_dir"
-    local -a p_names=("fzf-tab" "fast-syntax-highlighting" "zsh-autosuggestions" "zsh-history-substring-search" "zsh-vi-mode")
-    local -a p_repos=(
-      "https://github.com/Aloxaf/fzf-tab"
-      "https://github.com/zdharma-continuum/fast-syntax-highlighting"
-      "https://github.com/zsh-users/zsh-autosuggestions"
-      "https://github.com/zsh-users/zsh-history-substring-search"
-      "https://github.com/jeffreytse/zsh-vi-mode"
-    )
-
-    local i
-    for i in "${!p_names[@]}"; do
-      local p_name="${p_names[$i]}"
-      local p_repo="${p_repos[$i]}"
-      local p_dest="$plugin_dir/$p_name"
-      if [[ ! -d "$p_dest" ]]; then
-        log_info "Pre-cloning plugin: $p_name..."
-        git clone --depth=1 "$p_repo" "$p_dest" 2>/dev/null || log_warn "Could not pre-clone $p_name (will auto-install on first shell boot)"
-      else
-        log_ok "Plugin $p_name is already cloned"
+    local p_owner p_name p_sha p_dest
+    while read -r p_owner p_name p_sha; do
+      [[ -z "$p_owner" || "$p_owner" == \#* ]] && continue
+      p_dest="$plugin_dir/$p_name"
+      if [[ -d "$p_dest" ]]; then
+        log_ok "Plugin $p_name is already installed"
+        continue
       fi
-    done
+      log_info "Installing plugin $p_name @ ${p_sha:0:7}..."
+      if git init -q "$p_dest" \
+        && git -C "$p_dest" remote add origin "https://github.com/$p_owner/$p_name" \
+        && git -C "$p_dest" fetch -q --depth=1 origin "$p_sha" \
+        && git -C "$p_dest" checkout -q FETCH_HEAD; then
+        log_ok "Installed $p_name"
+      else
+        rm -rf "$p_dest"
+        log_warn "Could not install $p_name; re-run ./install.sh --config when online"
+      fi
+    done < "$lock"
   fi
 
   # Pre-compile bytecode for instant startup
