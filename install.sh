@@ -178,10 +178,10 @@ install_deps() {
   case "$distro" in
     arch)
       if $DRY_RUN; then
-        log_info "Would run: pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
+        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
       else
         log_info "Installing dependencies via pacman..."
-        run_as_root pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
+        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
       fi
       ;;
     fedora)
@@ -242,31 +242,16 @@ install_deps() {
     fi
   fi
 
-  # Starship prompt installation (fallback if not installed via distro package manager)
-  if ! command -v starship >/dev/null 2>&1; then
-    log_action "Installing Starship prompt..."
-    if $DRY_RUN; then
-      log_info "Would run: curl -sS https://starship.rs/install.sh | sh -s -- -y"
+  # starship & zoxide are installed by the distro packages above; never pipe
+  # a remote script into a shell, just tell the user what is missing.
+  local tool
+  for tool in starship zoxide; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      log_ok "$tool is already installed"
     else
-      curl -sS https://starship.rs/install.sh | sh -s -- -y
-      log_ok "Starship installed successfully"
+      log_warn "$tool not found; install it with your package manager (https://starship.rs, https://github.com/ajeetdsouza/zoxide)"
     fi
-  else
-    log_ok "Starship is already installed"
-  fi
-
-  # Zoxide installation (fallback if not installed via distro package manager)
-  if ! command -v zoxide >/dev/null 2>&1; then
-    log_action "Installing zoxide..."
-    if $DRY_RUN; then
-      log_info "Would run: curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-    else
-      curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
-      log_ok "Zoxide installed successfully"
-    fi
-  else
-    log_ok "Zoxide is already installed"
-  fi
+  done
 }
 
 install_config() {
@@ -423,8 +408,8 @@ set_default_shell() {
     log_info "Would run: chsh -s $zsh_bin $current_user"
   else
     if command -v chsh >/dev/null 2>&1; then
-      if ! chsh -s "$zsh_bin" "$current_user" 2>/dev/null; then
-        log_warn "Automatic chsh failed (password may be required). Run: chsh -s $zsh_bin"
+      if ! chsh -s "$zsh_bin" "$current_user"; then
+        log_warn "Automatic chsh failed. Run manually: chsh -s $zsh_bin"
       else
         log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
       fi
