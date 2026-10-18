@@ -68,6 +68,14 @@ If no option is provided, --all will be executed.
 EOF
 }
 
+# Guard against accidentally running under sudo
+if [[ "${EUID:-$(id -u)}" -eq 0 ]] && [[ -n "${SUDO_USER:-}" ]]; then
+  log_err "Do not run install.sh with sudo directly (invoked via sudo by $SUDO_USER)."
+  log_err "Run as your regular user: ./install.sh"
+  log_err "The script requests sudo permissions internally when installing system files."
+  exit 1
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)
