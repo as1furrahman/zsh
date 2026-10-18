@@ -1,0 +1,13 @@
+# Zsh compiled bytecode files
+*.zwc
+.zcompdump*
+
+# Auto-installed by plugin manager
+plugins/
+
+# Machine-local configuration overrides
+local.zsh
+
+# OS metadata
+.DS_Store
+Thumbs.db

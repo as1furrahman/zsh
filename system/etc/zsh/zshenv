@@ -1,0 +1,38 @@
+# /etc/zsh/zshenv: system-wide .zshenv file for zsh(1).
+#
+# This file is sourced on all invocations of the shell.
+# If the -f flag is present or if the NO_RCS option is
+# set within this file, all other initialization files
+# are skipped.
+#
+# Global Order: zshenv, zprofile, zshrc, zlogin
+
+if [[ -z "$PATH" || "$PATH" == "/bin:/usr/bin" ]]
+then
+	export PATH="/usr/local/bin:/usr/bin:/bin:/usr/games"
+fi
+
+# ---------------------------------------------------------------------------
+# Point zsh at ~/.config/zsh instead of $HOME (managed by dotfile repo).
+#
+# This has to live in /etc/zsh/zshenv and not in the user's own .zshenv: this
+# file is read *first*, so anything that changes $ZDOTDIR afterwards is too
+# late to relocate the files being read. zsh resolves every startup file
+# relative to $ZDOTDIR, so once this is set it reads
+# $ZDOTDIR/.zshrc rather than ~/.zshrc, and ~/.zshrc stops being used.
+# ---------------------------------------------------------------------------
+
+if [[ -z "$XDG_CONFIG_HOME" ]]
+then
+    export XDG_CONFIG_HOME="$HOME/.config"
+fi
+
+if [[ -d "$XDG_CONFIG_HOME/zsh" ]]
+then
+    export GHOSTTY_ZSH_ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+    # Supply a default only: any nonempty $ZDOTDIR is left alone.
+    if [[ -z "$ZDOTDIR" ]]
+    then
+        export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+    fi
+fi
