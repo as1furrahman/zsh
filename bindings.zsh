@@ -19,25 +19,7 @@ export KEYTIMEOUT=1
 # must be registered via this hook to survive.
 zvm_after_init() {
   # Re-source fzf key bindings so they survive zsh-vi-mode's keymap reset
-  local _fzf_found=0
-  for _fzf_bind in \
-    /opt/homebrew/opt/fzf/shell/key-bindings.zsh \
-    /usr/local/opt/fzf/shell/key-bindings.zsh \
-    /usr/share/fzf/key-bindings.zsh \
-    /usr/share/doc/fzf/examples/key-bindings.zsh \
-    "$HOME/.fzf/shell/key-bindings.zsh"; do
-    if [[ -f "$_fzf_bind" ]]; then
-      source "$_fzf_bind"
-      _fzf_found=1
-      break
-    fi
-  done
-  unset _fzf_bind
-
-  if (( ! _fzf_found )) && command -v fzf >/dev/null 2>&1; then
-    eval "$(fzf --zsh 2>/dev/null)"
-  fi
-  unset _fzf_found
+  _fzf_init keys
 
   # Restore fzf-tab's Tab completion in vi insert mode
   (( $+widgets[fzf-tab-complete] )) && bindkey -M viins '^I' fzf-tab-complete

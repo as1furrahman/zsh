@@ -83,27 +83,28 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Fuzzy Finder (fzf key-bindings and completion)
 # =========================================================
 
-_fzf_loaded=0
-for _fzf_script in \
-  /opt/homebrew/opt/fzf/shell \
-  /usr/local/opt/fzf/shell \
-  /usr/share/fzf \
-  /usr/share/doc/fzf/examples \
-  "$HOME/.fzf/shell"; do
-  if [[ -f "$_fzf_script/key-bindings.zsh" ]]; then
-    source "$_fzf_script/key-bindings.zsh"
-    [[ -f "$_fzf_script/completion.zsh" ]] && source "$_fzf_script/completion.zsh"
-    _fzf_loaded=1
-    break
-  fi
-done
-unset _fzf_script
+# Source fzf's shell integration from whichever location this system ships it.
+# Usage: _fzf_init [keys]   ("keys" skips completion, for re-binding only)
+_fzf_init() {
+  local dir
+  for dir in \
+    /opt/homebrew/opt/fzf/shell \
+    /usr/local/opt/fzf/shell \
+    /usr/share/fzf \
+    /usr/share/doc/fzf/examples \
+    "$HOME/.fzf/shell"; do
+    if [[ -f "$dir/key-bindings.zsh" ]]; then
+      source "$dir/key-bindings.zsh"
+      [[ "$1" != keys && -f "$dir/completion.zsh" ]] && source "$dir/completion.zsh"
+      return 0
+    fi
+  done
 
-# Fallback for standalone fzf binary installations
-if (( ! _fzf_loaded )) && command -v fzf >/dev/null 2>&1; then
-  eval "$(fzf --zsh 2>/dev/null)"
-fi
-unset _fzf_loaded
+  # Fallback for standalone fzf binary installations
+  command -v fzf >/dev/null 2>&1 && eval "$(fzf --zsh 2>/dev/null)"
+}
+
+_fzf_init
 
 # =========================================================
 # Modular Config Modules
