@@ -44,6 +44,19 @@ Review notes for the changes made on top of `main`. Commits are grouped by scope
 - `zplugin-update` reports drift against upstream; `zplugin-update --apply`
   checks out the new commit and prints the line to put in `plugins.lock`.
 
+## 7. Day-to-day shell (second round)
+- **Vi mode is opt-in** (`ZSH_VI=1`). In vi normal mode a terminal paste
+  (Ctrl+Shift+V) is read as commands, so zsh-vi-mode is no longer loaded by
+  default. Bindings moved into `_zsh_bindings`, which runs directly, or from
+  `zvm_after_init` when vi mode is on.
+- **History**: 1,000,000 entries, `HIST_IGNORE_SPACE` and early expiry removed,
+  so every command is kept. Shared live between sessions (`SHARE_HISTORY`).
+- **Native prompt** (`prompt.zsh`): each path level in its own color, repo name,
+  branch, staged/modified/untracked/conflict counts, ahead/behind, exit status,
+  command duration (>= 2s) and clock. `ZSH_PROMPT=starship` restores starship.
+- Verified in a pty: multi-line bracketed paste does not execute (no output, no
+  side effects) until Enter is pressed.
+
 ## Not changed
 Prompt (`starship.toml`), alias set and zsh-vi-mode were left alone.
 
