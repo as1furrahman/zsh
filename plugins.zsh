@@ -71,7 +71,7 @@ export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=200
 _zplugin_load zsh-users zsh-autosuggestions
 _zplugin_load zsh-users zsh-history-substring-search
 
-# 3. Vi mode
-_zplugin_load jeffreytse zsh-vi-mode
+# 3. Vi mode (opt-in: ZSH_VI=1; see bindings.zsh)
+[[ -n $ZSH_VI ]] && _zplugin_load jeffreytse zsh-vi-mode
 
 (( $#_zplugin_missing )) && print -u2 "zsh: missing plugins (${_zplugin_missing}); run ./install.sh --config"

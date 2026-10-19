@@ -18,13 +18,11 @@ fi
 HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
 [[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
 [[ -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh" ]] || mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
-HISTSIZE=100000
-SAVEHIST=100000
+HISTSIZE=1000000
+SAVEHIST=1000000
 
 setopt APPEND_HISTORY
 setopt HIST_IGNORE_DUPS
-setopt HIST_IGNORE_SPACE
-setopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_FIND_NO_DUPS
 setopt EXTENDED_HISTORY         # Record timestamp (epoch) and execution duration
 setopt SHARE_HISTORY            # Share history live between sessions (implies incremental append)
@@ -115,6 +113,7 @@ source "$ZDOTDIR/fzf.zsh"
 source "$ZDOTDIR/aliases.zsh"
 source "$ZDOTDIR/bindings.zsh"
 source "$ZDOTDIR/plugins.zsh"
+[[ -z $ZSH_VI ]] && _zsh_bindings
 source "$ZDOTDIR/prompt.zsh"
 
 # =========================================================
