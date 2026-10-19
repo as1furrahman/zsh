@@ -46,6 +46,6 @@ export PATH="$HOME/.local/bin:$PATH"
 [[ -d "$HOME/.strix/bin" ]] && export PATH="$HOME/.strix/bin:$PATH"
 
 # ---------- Docker / Podman Compatibility ----------
-if [[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock" ]]; then
-  export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"
+if [[ -S "${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock" ]]; then
+  export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock"
 fi

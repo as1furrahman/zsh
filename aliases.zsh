@@ -10,8 +10,8 @@ alias la='eza -lah --icons auto --git'
 # Tree view
 alias tree='eza --tree --icons auto'
 
-# Reuse ls completions for eza (avoids defining a separate completion function)
-compdef eza=ls
+# Complete ls alias using native eza completions
+compdef _eza ls
 
 # Better cat, kept pipe- and script-safe: no decoration, no pager
 alias cat='bat --style=plain --paging=never'

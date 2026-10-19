@@ -186,10 +186,10 @@ install_deps() {
       ;;
     fedora)
       if $DRY_RUN; then
-        log_info "Would run: dnf install -y zsh neovim eza bat fd-find fzf ripgrep lf git curl starship zoxide"
+        log_info "Would run: dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl zoxide"
       else
         log_info "Installing dependencies via dnf..."
-        run_as_root dnf install -y zsh neovim eza bat fd-find fzf ripgrep lf git curl starship zoxide
+        run_as_root dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl zoxide
       fi
       ;;
     debian)
