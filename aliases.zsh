@@ -69,11 +69,3 @@ alias gadog='PAGER="less -F -X" git log --all --decorate --oneline --graph'
 [[ -d "$ZDOTDIR/.git" ]] && alias dotfiles='git -C "$ZDOTDIR"'
 [[ -d "$HOME/.local/share/ghost/.git" ]] && alias ghostcfg='git -C "$HOME/.local/share/ghost"'
 
-# =========================================================
-# Video / Streaming
-# =========================================================
-
-# Guarded: only register stream alias if mpv is installed
-if command -v mpv >/dev/null 2>&1; then
-  alias stream='mpv av://v4l2:/dev/video4 --fullscreen --demuxer-lavf-o=input_format=mjpeg,framerate=30 --profile=low-latency --untimed'
-fi

@@ -3,8 +3,6 @@
 # Prevent Python virtualenv from polluting the prompt
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 
-FUNCNEST=100
-
 # Guard starship on dumb terminals (avoids error noise in IDEs/automated tools)
 if [[ "$TERM" != "dumb" ]] && command -v starship >/dev/null 2>&1; then
   eval "$(starship init zsh)"
