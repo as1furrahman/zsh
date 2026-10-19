@@ -429,7 +429,7 @@ set_default_shell() {
   local current_user="${USER:-$(id -un 2>/dev/null || whoami 2>/dev/null || echo "root")}"
   local current_shell
   current_shell="$(getent passwd "$current_user" 2>/dev/null | cut -d: -f7 || grep "^$current_user:" /etc/passwd 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
-  if [[ "$current_shell" == "$zsh_bin" ]]; then
+  if [[ "$current_shell" == "$zsh_bin" || ( -n "$current_shell" && "$(readlink -f "$current_shell" 2>/dev/null)" == "$(readlink -f "$zsh_bin" 2>/dev/null)" ) ]]; then
     log_ok "Default shell is already $zsh_bin"
     return 0
   fi

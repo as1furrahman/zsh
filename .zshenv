@@ -25,7 +25,7 @@ elif command -v batcat >/dev/null 2>&1; then
 fi
 
 # ---------- GPG ----------
-[[ -t 0 ]] && export GPG_TTY=$(tty)
+[[ -t 0 && -n "$TTY" ]] && export GPG_TTY="$TTY"
 
 # ---------- Starship ----------
 # $ZDOTDIR is exported by /etc/zsh/zshenv; fall back anyway so the path can

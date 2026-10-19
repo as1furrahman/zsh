@@ -43,13 +43,16 @@ alias 4='cd +4'
 # lf integration (terminal file manager directory following)
 lf() {
   local tmp dir
-  tmp=$(mktemp)
-  command lf -last-dir-path="$tmp" "$@"
-  if [ -f "$tmp" ]; then
-    dir=$(< "$tmp")
+  tmp=$(mktemp) || return 1
+  {
+    command lf -last-dir-path="$tmp" "$@"
+    if [[ -f "$tmp" ]]; then
+      dir=$(< "$tmp")
+      [[ -d "$dir" && "$dir" != "$PWD" ]] && cd "$dir"
+    fi
+  } always {
     rm -f "$tmp"
-    [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
-  fi
+  }
 }
 
 # =========================================================
