@@ -1,6 +1,6 @@
 # zsh [![CI](https://github.com/as1furrahman/zsh/actions/workflows/ci.yml/badge.svg)](https://github.com/as1furrahman/zsh/actions/workflows/ci.yml)
 
-Minimal, sub-60ms Zsh configuration for Arch, Fedora & Ubuntu.
+Minimal, Zsh configuration for Arch, Fedora & Ubuntu.
 
 ```sh
 git clone https://github.com/as1furrahman/zsh.git ~/.config/zsh
