@@ -38,6 +38,7 @@ setopt AUTOCD
 setopt NOBEEP
 setopt NUMERIC_GLOB_SORT       # Sort file10 after file9, not after file1
 setopt EXTENDED_GLOB           # Enable advanced zsh glob qualifiers and patterns
+setopt INTERACTIVE_COMMENTS    # '#' at the prompt starts a comment
 setopt AUTO_PUSHD              # Make cd push old directory to stack
 setopt PUSHD_IGNORE_DUPS       # Don't push duplicate directories to stack
 setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
@@ -46,8 +47,10 @@ setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
 # Smart Directory Navigation & Tools
 # =========================================================
 
+# lf reads LF_ICONS as one colon-separated string, while the icons file is
+# lf's native "type<space>icon" format, so fold it into key:icon pairs here.
 if [[ -f ~/.config/lf/icons ]]; then
-  LF_ICONS=$(cat ~/.config/lf/icons | tr '\n' ':')
+  LF_ICONS=$(awk '!/^#/ && NF >= 2 { printf "%s:%s:", $1, $2 }' ~/.config/lf/icons)
   export LF_ICONS
 fi
 
@@ -88,27 +91,33 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Fuzzy Finder (fzf key-bindings and completion)
 # =========================================================
 
-_fzf_loaded=0
-for _fzf_script in \
-  /opt/homebrew/opt/fzf/shell \
-  /usr/local/opt/fzf/shell \
-  /usr/share/fzf \
-  /usr/share/doc/fzf/examples \
-  "$HOME/.fzf/shell"; do
-  if [[ -f "$_fzf_script/key-bindings.zsh" ]]; then
-    source "$_fzf_script/key-bindings.zsh"
-    [[ -f "$_fzf_script/completion.zsh" ]] && source "$_fzf_script/completion.zsh"
-    _fzf_loaded=1
-    break
-  fi
-done
-unset _fzf_script
+# fzf's integration snapshots every shell option and evals the snapshot back,
+# including `zle`, which can only be changed while zle is active. A non-TTY
+# interactive shell (`zsh -i -c ...`, CI) never enters zle, so that restore
+# prints "can't change option: zle". These bindings are zle-only anyway.
+if [[ -t 0 ]]; then
+  _fzf_loaded=0
+  for _fzf_script in \
+    /opt/homebrew/opt/fzf/shell \
+    /usr/local/opt/fzf/shell \
+    /usr/share/fzf \
+    /usr/share/doc/fzf/examples \
+    "$HOME/.fzf/shell"; do
+    if [[ -f "$_fzf_script/key-bindings.zsh" ]]; then
+      source "$_fzf_script/key-bindings.zsh"
+      [[ -f "$_fzf_script/completion.zsh" ]] && source "$_fzf_script/completion.zsh"
+      _fzf_loaded=1
+      break
+    fi
+  done
+  unset _fzf_script
 
-# Fallback for standalone fzf binary installations
-if (( ! _fzf_loaded )) && command -v fzf >/dev/null 2>&1; then
-  eval "$(fzf --zsh 2>/dev/null)"
+  # Fallback for standalone fzf binary installations
+  if (( ! _fzf_loaded )) && command -v fzf >/dev/null 2>&1; then
+    eval "$(fzf --zsh 2>/dev/null)"
+  fi
+  unset _fzf_loaded
 fi
-unset _fzf_loaded
 
 # =========================================================
 # Modular Config Modules

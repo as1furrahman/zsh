@@ -65,12 +65,9 @@ alias vim='nvim'
 alias glog='PAGER="less -F -X" git log'
 alias gadog='PAGER="less -F -X" git log --all --decorate --oneline --graph'
 
-# Dotfiles repo management (adaptive)
-if [[ -d "$HOME/Projects/dotfile/.git" ]]; then
-  alias dotfiles='git -C "$HOME/Projects/dotfile"'
-elif [[ -d "$ZDOTDIR/.git" ]]; then
-  alias dotfiles='git -C "$ZDOTDIR"'
-fi
+# Dotfiles repo management (the two repos that actually exist)
+[[ -d "$ZDOTDIR/.git" ]] && alias dotfiles='git -C "$ZDOTDIR"'
+[[ -d "$HOME/.local/share/ghost/.git" ]] && alias ghostcfg='git -C "$HOME/.local/share/ghost"'
 
 # =========================================================
 # Video / Streaming
