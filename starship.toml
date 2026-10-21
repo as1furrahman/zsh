@@ -4,7 +4,7 @@ add_newline = false
 
 format = """
 [░▒▓](#c1a78e)\
-[  ](bg:#c1a78e fg:#292522)\
+$os\
 [](bg:#7f91b2 fg:#c1a78e)\
 $directory\
 [](fg:#7f91b2 bg:#34302c)\
@@ -18,6 +18,37 @@ $cmd_duration\
 $time\
 [ ](fg:#34302c)\
 $line_break$character"""
+
+[os]
+disabled = false
+style = "bg:#c1a78e fg:#292522"
+format = "[ $symbol]($style)"
+
+[os.symbols]
+Arch = " "
+Ubuntu = " "
+Debian = " "
+Fedora = " "
+Gentoo = " "
+Manjaro = " "
+Pop = " "
+Raspbian = " "
+Redhat = " "
+RedHatEnterprise = " "
+SUSE = " "
+openSUSE = " "
+Void = " "
+NixOS = " "
+Alpine = " "
+Mint = "󰣭 "
+EndeavourOS = " "
+Kali = " "
+FreeBSD = " "
+OpenBSD = " "
+NetBSD = " "
+Macos = " "
+Windows = "󰍲 "
+Linux = "󰌽 "
 
 [directory]
 style = "bold #292522 bg:#7f91b2"
