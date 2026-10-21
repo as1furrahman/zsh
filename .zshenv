@@ -38,6 +38,14 @@ export STARSHIP_CONFIG="${ZDOTDIR:-$HOME/.config/zsh}/starship.toml"
 # one dump to build and one directory scan at startup, not two.
 skip_global_compinit=1
 
+# ---------- fff (Fast File Manager) ----------
+export FFF_LS_COLORS=1
+export FFF_COL1=4
+export FFF_COL2=7
+export FFF_COL3=2
+export FFF_COL4=1
+export FFF_COL5=5
+
 # ---------- PATH ----------
 # Personal binaries/scripts
 export PATH="$HOME/.local/bin:$PATH"

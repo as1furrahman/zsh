@@ -55,6 +55,17 @@ lf() {
   }
 }
 
+# fff integration (suckless fast file manager with cd on exit)
+f() {
+  fff "$@"
+  local cdfile="${XDG_CACHE_HOME:-$HOME/.cache}/fff/.fff_d"
+  if [[ -f "$cdfile" ]]; then
+    local dest
+    dest=$(< "$cdfile")
+    [[ -d "$dest" && "$dest" != "$PWD" ]] && cd "$dest"
+  fi
+}
+
 # =========================================================
 # Editor
 # =========================================================
