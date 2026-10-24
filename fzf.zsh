@@ -60,7 +60,7 @@ zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 
 # Preview files with bat and directories with eza for argument completions
 zstyle ':fzf-tab:complete:*:*' fzf-preview \
-  '[[ -f $realpath ]] && bat --color=always --style=plain,numbers --line-range=:300 $realpath || [[ -d $realpath ]] && eza -1 --color=always $realpath'
+  'if [[ -f $realpath ]]; then bat --color=always --style=plain,numbers --line-range=:300 $realpath; elif [[ -d $realpath ]]; then eza -1 --color=always $realpath; fi'
 
 # Preview system processes when completing kill/pkill
 zstyle ':fzf-tab:complete:(kill|pkill):*' fzf-preview \

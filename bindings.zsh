@@ -1,52 +1,57 @@
 # =========================================================
-# Keybindings & Vi Mode
+# Keybindings
 # =========================================================
 
-# Cursor shape per vi mode
-ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BEAM
-ZVM_NORMAL_MODE_CURSOR=$ZVM_CURSOR_BLOCK
-ZVM_VISUAL_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+# Short escape-sequence delay (50 ms) that still survives multi-byte keys over SSH
+export KEYTIMEOUT=5
 
-# Disable command mode line highlight
-ZVM_VI_HIGHLIGHT_BACKGROUND=none
-ZVM_VI_HIGHLIGHT_FOREGROUND=none
-ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
+# Applied once all plugins are loaded (.zshrc), or from zsh-vi-mode's init hook
+# when ZSH_VI=1 (zsh-vi-mode resets every keymap on init).
+_zsh_bindings() {
+  local km
+  _fzf_init keys
 
-# Reduce escape sequence delay from 400ms to 10ms for instant Vi mode switching
-export KEYTIMEOUT=1
+  for km in emacs viins; do
+    # Restore fzf-tab's Tab completion
+    (( $+widgets[fzf-tab-complete] )) && bindkey -M $km '^I' fzf-tab-complete
 
-# zsh-vi-mode resets all bindings on init, so custom bindings
-# must be registered via this hook to survive.
-zvm_after_init() {
-  # Re-source fzf key bindings so they survive zsh-vi-mode's keymap reset
-  if [[ -n "$_FZF_SHELL_DIR" && -f "$_FZF_SHELL_DIR/key-bindings.zsh" ]]; then
-    source "$_FZF_SHELL_DIR/key-bindings.zsh"
-  elif command -v fzf >/dev/null 2>&1 && [[ -t 0 ]]; then
-    eval "$(fzf --zsh 2>/dev/null)"
-  fi
+    # Ctrl+Right / Ctrl+Left -> move by word
+    bindkey -M $km '^[[1;5C' forward-word
+    bindkey -M $km '^[[1;5D' backward-word
 
-  # Restore fzf-tab's Tab completion in vi insert mode
-  (( $+widgets[fzf-tab-complete] )) && bindkey -M viins '^I' fzf-tab-complete
+    # Ctrl+F -> fzf file picker (no hidden files)
+    bindkey -M $km '^F' _fzf_file_no_hidden
 
-  # Ctrl+Right -> move forward one word (^[[1;5C is the terminal escape code)
-  bindkey '^[[1;5C' forward-word
+    # Ctrl+\ -> toggle autosuggestions (useful for screen recordings)
+    (( $+widgets[autosuggest-toggle] )) && bindkey -M $km '^\' autosuggest-toggle
 
-  # Ctrl+Left -> move backward one word (^[[1;5D is the terminal escape code)
-  bindkey '^[[1;5D' backward-word
-
-  # Ctrl+F -> fzf file picker (no hidden files)
-  bindkey '^F' _fzf_file_no_hidden
-
-  # Ctrl+\ -> toggle autosuggestions (useful for screen recordings)
-  bindkey '^\' autosuggest-toggle
-
-  # Up/Down in insert mode -> history search by substring
-  bindkey '^[[A' history-substring-search-up
-  bindkey '^[[B' history-substring-search-down
-
-  # Normal mode (vicmd): Up/Down and k/j for substring search
-  bindkey -M vicmd 'k' history-substring-search-up
-  bindkey -M vicmd 'j' history-substring-search-down
-  bindkey -M vicmd '^[[A' history-substring-search-up
-  bindkey -M vicmd '^[[B' history-substring-search-down
+    # Up/Down -> history search by substring (normal and application cursor mode)
+    if (( $+widgets[history-substring-search-up] )); then
+      bindkey -M $km '^[[A' history-substring-search-up
+      bindkey -M $km '^[[B' history-substring-search-down
+      bindkey -M $km '^[OA' history-substring-search-up
+      bindkey -M $km '^[OB' history-substring-search-down
+    fi
+  done
 }
+
+# Vi mode is opt-in (ZSH_VI=1): in normal mode a terminal paste is read as vi
+# commands instead of text, which is never what you want from Ctrl+Shift+V.
+if [[ -n $ZSH_VI ]]; then
+  ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BEAM
+  ZVM_NORMAL_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+  ZVM_VISUAL_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+  ZVM_VI_HIGHLIGHT_BACKGROUND=none
+  ZVM_VI_HIGHLIGHT_FOREGROUND=none
+  ZVM_VI_HIGHLIGHT_EXTRASTYLE=none
+
+  zvm_after_init() {
+    _zsh_bindings
+    bindkey -M vicmd 'k' history-substring-search-up
+    bindkey -M vicmd 'j' history-substring-search-down
+    bindkey -M vicmd '^[[A' history-substring-search-up
+    bindkey -M vicmd '^[[B' history-substring-search-down
+    bindkey -M vicmd '^[OA' history-substring-search-up
+    bindkey -M vicmd '^[OB' history-substring-search-down
+  }
+fi

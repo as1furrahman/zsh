@@ -26,10 +26,10 @@ fi
 # relative to $ZDOTDIR, so once this is set it reads
 # $ZDOTDIR/.zshrc rather than ~/.zshrc, and ~/.zshrc stops being used.
 #
-# Everything above this line is the stock /etc/zsh/zshenv shipped by the
-# zsh-common package (5.9-8ubuntu3); it is kept so the default PATH guard still
-# applies. On a zsh package upgrade dpkg will see this file as locally
-# modified and ask what to do -- keep the local version.
+# Everything above this line is the PATH guard from the stock Debian/Ubuntu
+# /etc/zsh/zshenv, kept so the default PATH still applies. Other distros ship
+# no such file, so this simply becomes the system zshenv. If your package
+# manager reports a local modification on a zsh upgrade, keep this version.
 # ---------------------------------------------------------------------------
 
 if [[ -z "$XDG_CONFIG_HOME" ]]

@@ -1,5 +1,5 @@
 # Powerful but tastefully minimal zsh configuration
-# Tailored for Ubuntu 26.04.1 LTS & XDG Base Directory specification
+# Follows the XDG Base Directory specification
 
 # =========================================================
 # ZDOTDIR Fallback
@@ -18,16 +18,14 @@ fi
 HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
 [[ -d "${HISTFILE:h}" ]] || mkdir -p "${HISTFILE:h}"
 [[ -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh" ]] || mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
-HISTSIZE=100000
-SAVEHIST=100000
+HISTSIZE=1000000
+SAVEHIST=1000000
 
 setopt APPEND_HISTORY
 setopt HIST_IGNORE_DUPS
-setopt HIST_IGNORE_SPACE
-setopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_FIND_NO_DUPS
 setopt EXTENDED_HISTORY         # Record timestamp (epoch) and execution duration
-setopt INC_APPEND_HISTORY_TIME  # Append immediately upon command exit with execution time
+setopt SHARE_HISTORY            # Share history live between sessions (implies incremental append)
 setopt HIST_REDUCE_BLANKS       # Remove superfluous blanks from history commands
 
 # =========================================================
@@ -53,7 +51,6 @@ if [[ -z "$LF_ICONS" && -f ~/.config/lf/icons ]]; then
   LF_ICONS=$(awk '!/^#/ && NF >= 2 { printf "%s:%s:", $1, $2 }' ~/.config/lf/icons)
   export LF_ICONS
 fi
-
 # Initialize zoxide (smart cd replacement)
 if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"
@@ -72,13 +69,15 @@ autoload -Uz compinit
 
 # Fast compinit: run compaudit check once every 20 hours; otherwise reuse dump cache (-C)
 _zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
-if [[ -n "$_zcompdump"(#qN.mh-20) ]]; then
+# (N.mh-20): plain file modified within the last 20 hours; needs no EXTENDED_GLOB
+_zcompdump_fresh=("$_zcompdump"(N.mh-20))
+if (( $#_zcompdump_fresh )); then
   compinit -C -d "$_zcompdump"
 else
   compinit -d "$_zcompdump"
   { zcompile "$_zcompdump" } >/dev/null 2>&1 &!
 fi
-unset _zcompdump
+unset _zcompdump _zcompdump_fresh
 
 # Enable completion caching
 zstyle ':completion:*' use-cache on
@@ -91,22 +90,28 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 # Fuzzy Finder (fzf key-bindings and completion)
 # =========================================================
 
-# Locate fzf shell integration directory once (Linux first, then macOS / custom)
-_FZF_SHELL_DIR=""
-for _dir in /usr/share/fzf /usr/share/doc/fzf/examples /opt/homebrew/opt/fzf/shell /usr/local/opt/fzf/shell "$HOME/.fzf/shell"; do
-  if [[ -d "$_dir" ]]; then
-    _FZF_SHELL_DIR="$_dir"
-    break
-  fi
-done
-unset _dir
+# Source fzf's shell integration from whichever location this system ships it.
+# Usage: _fzf_init [keys]   ("keys" skips completion, for re-binding only)
+_fzf_init() {
+  local dir
+  for dir in \
+    /opt/homebrew/opt/fzf/shell \
+    /usr/local/opt/fzf/shell \
+    /usr/share/fzf \
+    /usr/share/doc/fzf/examples \
+    "$HOME/.fzf/shell"; do
+    if [[ -f "$dir/key-bindings.zsh" ]]; then
+      source "$dir/key-bindings.zsh"
+      [[ "$1" != keys && -f "$dir/completion.zsh" ]] && source "$dir/completion.zsh"
+      return 0
+    fi
+  done
 
-# Load fzf completion (key bindings are hooked in bindings.zsh to survive vi-mode init)
-if [[ -n "$_FZF_SHELL_DIR" ]]; then
-  [[ -f "$_FZF_SHELL_DIR/completion.zsh" ]] && source "$_FZF_SHELL_DIR/completion.zsh"
-elif command -v fzf >/dev/null 2>&1 && [[ -t 0 ]]; then
-  eval "$(fzf --zsh 2>/dev/null)"
-fi
+  # Fallback for standalone fzf binary installations
+  command -v fzf >/dev/null 2>&1 && eval "$(fzf --zsh 2>/dev/null)"
+}
+
+_fzf_init
 
 # =========================================================
 # Modular Config Modules
@@ -116,81 +121,16 @@ source "$ZDOTDIR/fzf.zsh"
 source "$ZDOTDIR/aliases.zsh"
 source "$ZDOTDIR/bindings.zsh"
 source "$ZDOTDIR/plugins.zsh"
+[[ -z $ZSH_VI ]] && _zsh_bindings
 source "$ZDOTDIR/prompt.zsh"
 
 # =========================================================
-# Node (nvm) - Instant Fast-Path & Lazy Loader
+# Runtime Versions (mise)
 # =========================================================
 
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-
-if [[ -d "$NVM_DIR/versions/node" ]]; then
-  _has_default=0
-  _v=''
-  if [[ -r "$NVM_DIR/alias/default" ]]; then
-    _has_default=1
-    _v="$(< "$NVM_DIR/alias/default")"
-  fi
-
-  _seen=" :$_v:"
-  while [[ -n "$_v" && -r "$NVM_DIR/alias/$_v" ]]; do
-    _next="$(< "$NVM_DIR/alias/$_v")"
-    [[ $_seen == *":$_next:"* ]] && break
-    _v="$_next"
-    _seen="$_seen$_v:"
-  done
-  unset _seen _next
-  _v="${_v#v}"
-
-  _bin=''
-  if [[ "$_v" == "system" ]]; then
-    : # Preserve system node selection
-  else
-    # When fast path cannot resolve the configured alias, load nvm to resolve it
-    if [[ "$_v" == */* || ( -n "$_v" && ! "$_v" =~ ^[0-9] ) ]]; then
-      if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-        . "$NVM_DIR/nvm.sh" --no-use 2>/dev/null
-        _resolved="$(nvm_resolve_alias "${_v:-default}" 2>/dev/null)"
-        _resolved="${_resolved#v}"
-        if [[ "$_resolved" == "system" ]]; then
-          _v="system"
-        elif [[ "$_resolved" =~ ^[0-9] ]]; then
-          _v="$_resolved"
-        else
-          _v=''
-        fi
-        unset _resolved
-      fi
-    fi
-
-    if [[ "$_v" == "system" ]]; then
-      : # Preserve system node selection
-    elif [[ -n "$_v" ]]; then
-      for _d in "$NVM_DIR"/versions/node/v${_v}(|.*)/bin(Nn); do _bin=$_d; done
-    elif (( ! _has_default )); then
-      for _d in "$NVM_DIR"/versions/node/*/bin(Nn); do _bin=$_d; done
-    fi
-
-    if [[ -n $_bin ]]; then
-      case ":$PATH:" in
-        *":$_bin:"*) ;;
-        *) PATH="$_bin:$PATH" ;;
-      esac
-    fi
-  fi
-  unset _has_default _v _bin _d
-fi
-export PATH
-
-# Load real nvm on first use
-if [[ -s "$NVM_DIR/nvm.sh" ]] && (( ! $+functions[nvm] )); then
-  nvm() {
-    unfunction nvm
-    . "$NVM_DIR/nvm.sh"
-    [[ -s "$NVM_DIR/bash_completion" ]] && . "$NVM_DIR/bash_completion"
-    rehash
-    nvm "$@"
-  }
+# Per-project node/python/etc. versions; replaces the old nvm fast-path.
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
 fi
 
 # =========================================================

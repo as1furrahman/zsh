@@ -1,0 +1,6 @@
+# owner name commit-sha  (pinned plugin revisions; read by install.sh and zplugin-update)
+Aloxaf fzf-tab 24105b15714bfec37989ed5c5b6e60f572253019
+zdharma-continuum fast-syntax-highlighting 4672ad5dd9ad68a7effc1476d65afb7c584ce2b3
+zsh-users zsh-autosuggestions 85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
+zsh-users zsh-history-substring-search a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a
+jeffreytse zsh-vi-mode 91cafe4a09b6670cb8e761aa413e5f7b9e00816f

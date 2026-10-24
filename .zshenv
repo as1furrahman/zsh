@@ -42,9 +42,6 @@ skip_global_compinit=1
 # Personal binaries/scripts
 export PATH="$HOME/.local/bin:$PATH"
 
-# Optional tool binary paths (guarded)
-[[ -d "$HOME/.strix/bin" ]] && export PATH="$HOME/.strix/bin:$PATH"
-
 # ---------- Docker / Podman Compatibility ----------
 if [[ -S "${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock" ]]; then
   export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock"

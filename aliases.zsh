@@ -71,4 +71,3 @@ alias gadog='PAGER="less -F -X" git log --all --decorate --oneline --graph'
 # Dotfiles repo management (the two repos that actually exist)
 [[ -d "$ZDOTDIR/.git" ]] && alias dotfiles='git -C "$ZDOTDIR"'
 [[ -d "$HOME/.local/share/ghost/.git" ]] && alias ghostcfg='git -C "$HOME/.local/share/ghost"'
-

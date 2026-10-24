@@ -178,10 +178,10 @@ install_deps() {
   case "$distro" in
     arch)
       if $DRY_RUN; then
-        log_info "Would run: pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide"
+        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide"
       else
         log_info "Installing dependencies via pacman..."
-        run_as_root pacman -Syu --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide
+        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide
       fi
       ;;
     fedora)
@@ -242,31 +242,16 @@ install_deps() {
     fi
   fi
 
-  # Starship prompt installation (fallback if not installed via distro package manager)
-  if ! command -v starship >/dev/null 2>&1; then
-    log_action "Installing Starship prompt..."
-    if $DRY_RUN; then
-      log_info "Would run: curl -sS https://starship.rs/install.sh | sh -s -- -y"
+  # starship & zoxide are installed by the distro packages above; never pipe
+  # a remote script into a shell, just tell the user what is missing.
+  local tool
+  for tool in starship zoxide; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      log_ok "$tool is already installed"
     else
-      curl -sS https://starship.rs/install.sh | sh -s -- -y
-      log_ok "Starship installed successfully"
+      log_warn "$tool not found; install it with your package manager (https://starship.rs, https://github.com/ajeetdsouza/zoxide)"
     fi
-  else
-    log_ok "Starship is already installed"
-  fi
-
-  # Zoxide installation (fallback if not installed via distro package manager)
-  if ! command -v zoxide >/dev/null 2>&1; then
-    log_action "Installing zoxide..."
-    if $DRY_RUN; then
-      log_info "Would run: curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
-    else
-      curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
-      log_ok "Zoxide installed successfully"
-    fi
-  else
-    log_ok "Zoxide is already installed"
-  fi
+  done
 }
 
 install_config() {
@@ -290,6 +275,7 @@ install_config() {
       "bindings.zsh"
       "fzf.zsh"
       "plugins.zsh"
+      "plugins.lock"
       "prompt.zsh"
       "starship.toml"
       ".gitignore"
@@ -334,31 +320,30 @@ install_config() {
     fi
   fi
 
-  # Pre-clone plugins for instant first-run experience if git is available
+  # Install plugins at the exact commits pinned in plugins.lock
   local plugin_dir="$TARGET_DIR/plugins"
-  if command -v git >/dev/null 2>&1 && ! $DRY_RUN; then
+  local lock="$SCRIPT_DIR/plugins.lock"
+  if command -v git >/dev/null 2>&1 && [[ -f "$lock" ]] && ! $DRY_RUN; then
     mkdir -p "$plugin_dir"
-    local -a p_names=("fzf-tab" "fast-syntax-highlighting" "zsh-autosuggestions" "zsh-history-substring-search" "zsh-vi-mode")
-    local -a p_repos=(
-      "https://github.com/Aloxaf/fzf-tab"
-      "https://github.com/zdharma-continuum/fast-syntax-highlighting"
-      "https://github.com/zsh-users/zsh-autosuggestions"
-      "https://github.com/zsh-users/zsh-history-substring-search"
-      "https://github.com/jeffreytse/zsh-vi-mode"
-    )
-
-    local i
-    for i in "${!p_names[@]}"; do
-      local p_name="${p_names[$i]}"
-      local p_repo="${p_repos[$i]}"
-      local p_dest="$plugin_dir/$p_name"
-      if [[ ! -d "$p_dest" ]]; then
-        log_info "Pre-cloning plugin: $p_name..."
-        git clone --depth=1 "$p_repo" "$p_dest" 2>/dev/null || log_warn "Could not pre-clone $p_name (will auto-install on first shell boot)"
-      else
-        log_ok "Plugin $p_name is already cloned"
+    local p_owner p_name p_sha p_dest
+    while read -r p_owner p_name p_sha; do
+      [[ -z "$p_owner" || "$p_owner" == \#* ]] && continue
+      p_dest="$plugin_dir/$p_name"
+      if [[ -d "$p_dest" ]]; then
+        log_ok "Plugin $p_name is already installed"
+        continue
       fi
-    done
+      log_info "Installing plugin $p_name @ ${p_sha:0:7}..."
+      if git init -q "$p_dest" \
+        && git -C "$p_dest" remote add origin "https://github.com/$p_owner/$p_name" \
+        && git -C "$p_dest" fetch -q --depth=1 origin "$p_sha" \
+        && git -C "$p_dest" checkout -q FETCH_HEAD; then
+        log_ok "Installed $p_name"
+      else
+        rm -rf "$p_dest"
+        log_warn "Could not install $p_name; re-run ./install.sh --config when online"
+      fi
+    done < "$lock"
   fi
 
   # Pre-compile bytecode for instant startup
@@ -439,8 +424,8 @@ set_default_shell() {
     log_info "Would run: chsh -s $zsh_bin $current_user"
   else
     if command -v chsh >/dev/null 2>&1; then
-      if ! chsh -s "$zsh_bin" "$current_user" 2>/dev/null; then
-        log_warn "Automatic chsh failed (password may be required). Run: chsh -s $zsh_bin"
+      if ! chsh -s "$zsh_bin" "$current_user"; then
+        log_warn "Automatic chsh failed. Run manually: chsh -s $zsh_bin"
       else
         log_ok "Changed default shell to $zsh_bin (takes effect on next login)"
       fi
