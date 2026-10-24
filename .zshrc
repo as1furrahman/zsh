@@ -35,6 +35,8 @@ setopt HIST_REDUCE_BLANKS       # Remove superfluous blanks from history command
 setopt AUTOCD
 setopt NOBEEP
 setopt NUMERIC_GLOB_SORT       # Sort file10 after file9, not after file1
+setopt EXTENDED_GLOB           # Enable advanced zsh glob qualifiers and patterns
+setopt INTERACTIVE_COMMENTS    # '#' at the prompt starts a comment
 setopt AUTO_PUSHD              # Make cd push old directory to stack
 setopt PUSHD_IGNORE_DUPS       # Don't push duplicate directories to stack
 setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
@@ -43,6 +45,12 @@ setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
 # Smart Directory Navigation & Tools
 # =========================================================
 
+# lf reads LF_ICONS as one colon-separated string, while the icons file is
+# lf's native "type<space>icon" format, so fold it into key:icon pairs here.
+if [[ -z "$LF_ICONS" && -f ~/.config/lf/icons ]]; then
+  LF_ICONS=$(awk '!/^#/ && NF >= 2 { printf "%s:%s:", $1, $2 }' ~/.config/lf/icons)
+  export LF_ICONS
+fi
 # Initialize zoxide (smart cd replacement)
 if command -v zoxide >/dev/null 2>&1; then
   eval "$(zoxide init zsh)"

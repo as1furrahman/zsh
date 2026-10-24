@@ -10,8 +10,8 @@ alias la='eza -lah --icons auto --git'
 # Tree view
 alias tree='eza --tree --icons auto'
 
-# Reuse ls completions for eza (avoids defining a separate completion function)
-compdef eza=ls
+# Complete ls alias using native eza completions
+compdef _eza ls
 
 # Better cat, kept pipe- and script-safe: no decoration, no pager
 alias cat='bat --style=plain --paging=never'
@@ -43,13 +43,16 @@ alias 4='cd +4'
 # lf integration (terminal file manager directory following)
 lf() {
   local tmp dir
-  tmp=$(mktemp)
-  command lf -last-dir-path="$tmp" "$@"
-  if [ -f "$tmp" ]; then
-    dir=$(< "$tmp")
+  tmp=$(mktemp) || return 1
+  {
+    command lf -last-dir-path="$tmp" "$@"
+    if [[ -f "$tmp" ]]; then
+      dir=$(< "$tmp")
+      [[ -d "$dir" && "$dir" != "$PWD" ]] && cd "$dir"
+    fi
+  } always {
     rm -f "$tmp"
-    [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
-  fi
+  }
 }
 
 # =========================================================
@@ -65,7 +68,6 @@ alias vim='nvim'
 alias glog='PAGER="less -F -X" git log'
 alias gadog='PAGER="less -F -X" git log --all --decorate --oneline --graph'
 
-# Dotfiles repo management (only when the config dir is itself a checkout)
-if [[ -d "$ZDOTDIR/.git" ]]; then
-  alias dotfiles='git -C "$ZDOTDIR"'
-fi
+# Dotfiles repo management (the two repos that actually exist)
+[[ -d "$ZDOTDIR/.git" ]] && alias dotfiles='git -C "$ZDOTDIR"'
+[[ -d "$HOME/.local/share/ghost/.git" ]] && alias ghostcfg='git -C "$HOME/.local/share/ghost"'

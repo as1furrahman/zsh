@@ -25,7 +25,7 @@ elif command -v batcat >/dev/null 2>&1; then
 fi
 
 # ---------- GPG ----------
-[[ -t 0 ]] && export GPG_TTY=$(tty)
+[[ -t 0 && -n "$TTY" ]] && export GPG_TTY="$TTY"
 
 # ---------- Starship ----------
 # $ZDOTDIR is exported by /etc/zsh/zshenv; fall back anyway so the path can
@@ -43,6 +43,6 @@ skip_global_compinit=1
 export PATH="$HOME/.local/bin:$PATH"
 
 # ---------- Docker / Podman Compatibility ----------
-if [[ -S "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock" ]]; then
-  export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"
+if [[ -S "${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock" ]]; then
+  export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock"
 fi

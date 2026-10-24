@@ -3,15 +3,10 @@
 # Prevent Python virtualenv from polluting the prompt
 export VIRTUAL_ENV_DISABLE_PROMPT=1
 
-FUNCNEST=100
-
-# ZSH_PROMPT=starship switches to starship (see starship.toml); the default is
-# the native prompt below: colored path levels, git info, status, timing, clock.
-if [[ "$ZSH_PROMPT" == starship ]]; then
-  # Guard starship on dumb terminals (avoids error noise in IDEs/automated tools)
-  if [[ "$TERM" != "dumb" ]] && command -v starship >/dev/null 2>&1; then
-    eval "$(starship init zsh)"
-  fi
+# Starship is used by default if installed (guard on dumb terminals).
+# Set ZSH_PROMPT=native to force the native prompt below.
+if [[ "$ZSH_PROMPT" != native && "$TERM" != "dumb" ]] && command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
   return 0
 fi
 

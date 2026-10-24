@@ -94,7 +94,7 @@ USAGE:
 
 OPTIONS:
   --all         Install dependencies, link configuration, set up system zshenv, and change shell
-  --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, starship, zoxide)
+  --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, lf, starship, zoxide)
   --config      Link/install configuration files to ~/.config/zsh
   --system      Install system Zsh redirection to ~/.config/zsh (requires root/sudo)
   --shell       Set zsh as the default login shell via chsh
@@ -178,36 +178,36 @@ install_deps() {
   case "$distro" in
     arch)
       if $DRY_RUN; then
-        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide"
+        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide"
       else
         log_info "Installing dependencies via pacman..."
-        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep git curl starship zoxide
+        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide
       fi
       ;;
     fedora)
       if $DRY_RUN; then
-        log_info "Would run: dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide"
+        log_info "Would run: dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl zoxide"
       else
         log_info "Installing dependencies via dnf..."
-        run_as_root dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl starship zoxide
+        run_as_root dnf install -y zsh neovim eza bat fd-find fzf ripgrep git curl zoxide
       fi
       ;;
     debian)
       if $DRY_RUN; then
-        log_info "Would run: apt update && apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl"
+        log_info "Would run: apt update && apt install -y zsh neovim eza bat fd-find fzf ripgrep lf git curl"
       else
         log_info "Installing dependencies via apt..."
         run_as_root apt update -y
         if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-          DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+          DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep lf git curl
         else
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep git curl
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y zsh neovim eza bat fd-find fzf ripgrep lf git curl
         fi
       fi
       ;;
     *)
       log_warn "Unknown Linux distribution. Skipping automatic package manager installation."
-      log_info "Please ensure the following tools are installed: zsh neovim eza bat fd fzf ripgrep starship zoxide"
+      log_info "Please ensure the following tools are installed: zsh neovim eza bat fd fzf ripgrep lf starship zoxide"
       ;;
   esac
 
@@ -304,6 +304,22 @@ install_config() {
     done
   fi
 
+  # lf reads its icons from ~/.config/lf, outside ZDOTDIR; link the repo copy
+  local lf_icons_src="$SCRIPT_DIR/lf/icons"
+  local lf_icons_dest="${XDG_CONFIG_HOME:-$HOME/.config}/lf/icons"
+  if [[ -f "$lf_icons_src" ]]; then
+    if [[ -L "$lf_icons_dest" && "$(readlink -- "$lf_icons_dest")" == "$lf_icons_src" ]]; then
+      log_ok "Already linked: lf/icons"
+    elif $DRY_RUN; then
+      log_info "Would link: $lf_icons_dest -> $lf_icons_src"
+    else
+      mkdir -p "$(dirname -- "$lf_icons_dest")"
+      backup_if_exists "$lf_icons_dest"
+      ln -snf "$lf_icons_src" "$lf_icons_dest"
+      log_ok "Linked: $lf_icons_dest -> $lf_icons_src"
+    fi
+  fi
+
   # Install plugins at the exact commits pinned in plugins.lock
   local plugin_dir="$TARGET_DIR/plugins"
   local lock="$SCRIPT_DIR/plugins.lock"
@@ -398,7 +414,7 @@ set_default_shell() {
   local current_user="${USER:-$(id -un 2>/dev/null || whoami 2>/dev/null || echo "root")}"
   local current_shell
   current_shell="$(getent passwd "$current_user" 2>/dev/null | cut -d: -f7 || grep "^$current_user:" /etc/passwd 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
-  if [[ "$current_shell" == "$zsh_bin" ]]; then
+  if [[ "$current_shell" == "$zsh_bin" || ( -n "$current_shell" && "$(readlink -f "$current_shell" 2>/dev/null)" == "$(readlink -f "$zsh_bin" 2>/dev/null)" ) ]]; then
     log_ok "Default shell is already $zsh_bin"
     return 0
   fi

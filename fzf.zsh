@@ -2,7 +2,13 @@
 # fzf Configuration
 # =========================================================
 
-export FZF_DEFAULT_COMMAND='fd --type f --hidden --strip-cwd-prefix'  # strip-cwd-prefix removes leading ./
+if command -v fd >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --strip-cwd-prefix'
+elif command -v fdfind >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --strip-cwd-prefix'
+else
+  export FZF_DEFAULT_COMMAND='find . -type f'
+fi
 
 # Ctrl-T uses fd
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
@@ -24,7 +30,8 @@ export FZF_CTRL_T_OPTS="--preview '$_FZF_PREVIEW_CMD'"
 _fzf_file_no_hidden() {
   local cmd result
   cmd="${FZF_DEFAULT_COMMAND/--hidden /}"
-  result=$(eval "${cmd:-find . -type f}" | fzf --preview "$_FZF_PREVIEW_CMD") \
+  [[ "$cmd" == "$FZF_DEFAULT_COMMAND" && "$cmd" == *"find "* ]] && cmd="find . -not -path '*/.*' -type f"
+  result=$(eval "$cmd" | fzf --preview "$_FZF_PREVIEW_CMD") \
     && LBUFFER+="${(q)result}"  # LBUFFER is the text left of cursor
   zle reset-prompt
 }
@@ -39,6 +46,11 @@ zstyle ':completion:*:git-checkout:*' sort false
 
 # Set descriptions format to enable group support
 zstyle ':completion:*:descriptions' format '[%d]'
+
+# Populate LS_COLORS if unset so completion lists and fzf-tab use colors
+if [[ -z "$LS_COLORS" ]] && command -v dircolors >/dev/null 2>&1; then
+  eval "$(dircolors -b)"
+fi
 
 # Set list-colors to enable filename colorizing
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
