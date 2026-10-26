@@ -45,20 +45,29 @@ setopt PUSHD_SILENT            # Don't print directory stack after pushd/popd
 # Smart Directory Navigation & Tools
 # =========================================================
 
-# lf reads LF_ICONS as one colon-separated string, while the icons file is
-# lf's native "type<space>icon" format, so fold it into key:icon pairs here.
+# lf reads LF_ICONS as one colon-separated string.
+# Cached to avoid spawning awk subprocesses on every interactive shell launch.
 if [[ -z "$LF_ICONS" && -f ~/.config/lf/icons ]]; then
-  LF_ICONS=$(awk '!/^#/ && NF >= 2 { printf "%s:%s:", $1, $2 }' ~/.config/lf/icons)
+  _lf_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/lf_icons"
+  if [[ ! -f "$_lf_cache" || ~/.config/lf/icons -nt "$_lf_cache" ]]; then
+    mkdir -p "${_lf_cache:h}"
+    awk '!/^#/ && NF >= 2 { printf "%s:%s:", $1, $2 }' ~/.config/lf/icons > "$_lf_cache"
+  fi
+  LF_ICONS=$(<"$_lf_cache")
   export LF_ICONS
-fi
-# Initialize zoxide (smart cd replacement)
-if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init zsh)"
+  unset _lf_cache
 fi
 
-# Per-directory environments (.envrc) via direnv
-if command -v direnv >/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
+# Initialize zoxide via compiled cache (avoids subshell eval on every boot)
+if command -v zoxide >/dev/null 2>&1; then
+  _zoxide_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zoxide.zsh"
+  if [[ ! -f "$_zoxide_cache" || /usr/bin/zoxide -nt "$_zoxide_cache" ]]; then
+    mkdir -p "${_zoxide_cache:h}"
+    zoxide init zsh > "$_zoxide_cache"
+    zcompile "$_zoxide_cache" 2>/dev/null &!
+  fi
+  source "$_zoxide_cache"
+  unset _zoxide_cache
 fi
 
 # =========================================================
@@ -123,15 +132,6 @@ source "$ZDOTDIR/bindings.zsh"
 source "$ZDOTDIR/plugins.zsh"
 [[ -z $ZSH_VI ]] && _zsh_bindings
 source "$ZDOTDIR/prompt.zsh"
-
-# =========================================================
-# Runtime Versions (mise)
-# =========================================================
-
-# Per-project node/python/etc. versions; replaces the old nvm fast-path.
-if command -v mise >/dev/null 2>&1; then
-  eval "$(mise activate zsh)"
-fi
 
 # =========================================================
 # Machine-Local Overrides
