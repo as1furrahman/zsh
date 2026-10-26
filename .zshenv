@@ -54,3 +54,6 @@ export PATH="$HOME/.local/bin:$PATH"
 if [[ -S "${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock" ]]; then
   export DOCKER_HOST="unix://${XDG_RUNTIME_DIR:-/run/user/${EUID}}/podman/podman.sock"
 fi
+# ---------- Cargo / Rust ----------
+[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+
