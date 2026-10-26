@@ -155,9 +155,14 @@ fi
   done
 }
 
+# Fast Node.js static PATH & lazy-loaded NVM (sub-millisecond shell startup)
+export PATH="$HOME/.config/nvm/versions/node/v24.22.1/bin:$PATH"
 export NVM_DIR="$HOME/.config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+nvm() {
+  unset -f nvm
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  nvm "$@"
+}
 
 # opencode
 export PATH=/home/asif/.opencode/bin:$PATH
