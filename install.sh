@@ -7,7 +7,7 @@
 # Usage:
 #   ./install.sh             # Full automated reproduction (interactive prompts for sudo/chsh)
 #   ./install.sh --all       # Run everything (deps + config + system + shell)
-#   ./install.sh --deps      # Install distro packages, starship, zoxide & CLI symlinks
+#   ./install.sh --deps      # Install distro packages, zoxide & CLI symlinks
 #   ./install.sh --config    # Link user configurations to ~/.config/zsh
 #   ./install.sh --system    # Install /etc/zsh/zshenv (requires root/sudo)
 #   ./install.sh --shell     # Change user default login shell to zsh
@@ -94,7 +94,7 @@ USAGE:
 
 OPTIONS:
   --all         Install dependencies, link configuration, set up system zshenv, and change shell
-  --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, lf, starship, zoxide)
+  --deps        Install distro packages (zsh, neovim, eza, bat, fd, fzf, ripgrep, lf, zoxide)
   --config      Link/install configuration files to ~/.config/zsh
   --system      Install system Zsh redirection to ~/.config/zsh (requires root/sudo)
   --shell       Set zsh as the default login shell via chsh
@@ -178,10 +178,10 @@ install_deps() {
   case "$distro" in
     arch)
       if $DRY_RUN; then
-        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide"
+        log_info "Would run: pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl zoxide"
       else
         log_info "Installing dependencies via pacman..."
-        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl starship zoxide
+        run_as_root pacman -S --needed --noconfirm zsh neovim eza bat fd fzf ripgrep lf git curl zoxide
       fi
       ;;
     fedora)
@@ -207,7 +207,7 @@ install_deps() {
       ;;
     *)
       log_warn "Unknown Linux distribution. Skipping automatic package manager installation."
-      log_info "Please ensure the following tools are installed: zsh neovim eza bat fd fzf ripgrep lf starship zoxide"
+      log_info "Please ensure the following tools are installed: zsh neovim eza bat fd fzf ripgrep lf zoxide"
       ;;
   esac
 
@@ -242,16 +242,14 @@ install_deps() {
     fi
   fi
 
-  # starship & zoxide are installed by the distro packages above; never pipe
+  # zoxide is installed by the distro packages above; never pipe
   # a remote script into a shell, just tell the user what is missing.
-  local tool
-  for tool in starship zoxide; do
-    if command -v "$tool" >/dev/null 2>&1; then
-      log_ok "$tool is already installed"
-    else
-      log_warn "$tool not found; install it with your package manager (https://starship.rs, https://github.com/ajeetdsouza/zoxide)"
-    fi
-  done
+  local tool="zoxide"
+  if command -v "$tool" >/dev/null 2>&1; then
+    log_ok "$tool is already installed"
+  else
+    log_warn "$tool not found; install it with your package manager (https://github.com/ajeetdsouza/zoxide)"
+  fi
 }
 
 install_config() {
@@ -277,7 +275,6 @@ install_config() {
       "plugins.zsh"
       "plugins.lock"
       "prompt.zsh"
-      "starship.toml"
       ".gitignore"
       "LICENSE"
     )
