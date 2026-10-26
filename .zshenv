@@ -27,10 +27,8 @@ fi
 # ---------- GPG ----------
 [[ -t 0 && -n "$TTY" ]] && export GPG_TTY="$TTY"
 
-# ---------- Starship ----------
-# $ZDOTDIR is exported by /etc/zsh/zshenv; fall back anyway so the path can
-# never collapse to the literal "/starship.toml" if that block is missing.
-export STARSHIP_CONFIG="${ZDOTDIR:-$HOME/.config/zsh}/starship.toml"
+# ---------- Native Suckless Prompt ----------
+export ZSH_PROMPT="native"
 
 # ---------- Completion Optimization ----------
 # Ubuntu's /etc/zsh/zshrc runs compinit unless this is set; .zshrc runs it again
@@ -39,6 +37,7 @@ export STARSHIP_CONFIG="${ZDOTDIR:-$HOME/.config/zsh}/starship.toml"
 skip_global_compinit=1
 
 # ---------- fff (Fast File Manager) ----------
+export DWL_FILEMGR="fff"
 export FFF_LS_COLORS=1
 export FFF_COL1=4
 export FFF_COL2=7

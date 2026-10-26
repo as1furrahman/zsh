@@ -1,14 +1,8 @@
 # ~/.config/zsh/prompt.zsh
+# Pure native Zsh prompt adhering to suckless minimalism (zero external daemon forks)
 
 # Prevent Python virtualenv from polluting the prompt
 export VIRTUAL_ENV_DISABLE_PROMPT=1
-
-# Starship is used by default if installed (guard on dumb terminals).
-# Set ZSH_PROMPT=native to force the native prompt below.
-if [[ "$ZSH_PROMPT" != native && "$TERM" != "dumb" ]] && command -v starship >/dev/null 2>&1; then
-  eval "$(starship init zsh)"
-  return 0
-fi
 
 zmodload zsh/datetime zsh/mathfunc
 autoload -Uz add-zsh-hook
